@@ -1,0 +1,1721 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#13161b">
+<meta name="robots" content="noindex">
+<title>Gefahren & Co Lörrach</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: schematische Kreiskarte oben, Meldungsliste darunter, feste Melde-Leiste unten (Nachtfahrt-Instrument, bewusst nur dunkel) */
+:root{
+  --asphalt:#13161b; --panel:#1b1f26; --panel-2:#222731; --line:#2e343e;
+  --fg:#ebe8df; --muted:#8f959e; --signal:#f2b705; --signal-ink:#1a1400;
+  --t-blitz:#ff5148; --t-kontrolle:#58a6ff; --t-unfall:#ff8d3a; --t-stau:#b78cff; --t-gefahr:#f2b705; --t-falsch:#ff2d6f;
+  --ok:#5ccf86; --road:#3a414c; --road-a:#4d5562; --water:#1f3b57; --water-ink:#4a7aa6;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{background:var(--asphalt);color:var(--fg)}
+body{font-family:var(--f-body);font-size:15px;line-height:1.45}
+.wrap{max-width:720px;margin:0 auto;padding-inline:16px;padding-block:14px 128px;display:flex;flex-direction:column;gap:18px}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--f-display);font-weight:700;font-size:28px;letter-spacing:.01em;line-height:1;margin:0;text-transform:uppercase}
+.appbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:nowrap}
+.appbar .live{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.appbar .live span{overflow:hidden;text-overflow:ellipsis}
+.brand{display:flex;flex-direction:column;gap:5px;min-width:0}
+.filters{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;margin-top:-4px;scrollbar-width:none}
+.filters::-webkit-scrollbar{display:none}
+.fchip{flex:none;font:600 13.5px var(--f-body);background:var(--panel);color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:8px 13px;cursor:pointer;display:inline-flex;gap:7px;align-items:center;font-variant-numeric:tabular-nums}
+.fchip i{width:9px;height:9px;border-radius:50%}
+.fchip b{color:var(--fg);font-weight:700}
+.fchip[aria-pressed="true"]{background:var(--fg);color:var(--asphalt);border-color:var(--fg)}
+.fchip[aria-pressed="true"] b{color:var(--asphalt)}
+.navbtn{flex:none;width:64px;display:flex;flex-direction:column;align-items:center;gap:2px;font:600 11.5px var(--f-body);color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px 0;cursor:pointer}
+.navbtn .ic{font-size:18px;line-height:1;color:var(--fg)}
+.menu{display:flex;flex-direction:column;gap:8px}
+.menu button{display:flex;flex-direction:column;gap:2px;text-align:left;font:inherit;color:var(--fg);background:var(--asphalt);border:1px solid var(--line);border-radius:12px;padding:13px 14px;cursor:pointer}
+.menu button b{font-weight:600} .menu button span{font-size:13px;color:var(--muted)}
+.facts{margin:0;padding-left:18px;color:var(--muted);font-size:13.5px;display:flex;flex-direction:column;gap:6px}
+.sublinks{display:flex;gap:14px;flex-wrap:wrap}
+.sublinks button{font:500 12.5px var(--f-body);background:none;border:0;padding:2px 0;color:var(--muted);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.sublinks button.warn{color:var(--t-blitz)}
+h1 span{color:var(--signal)}
+.sub{color:var(--muted);font-size:13px;margin-top:4px}
+.live{display:flex;align-items:center;gap:8px;font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.live i{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.live.on i{background:var(--ok)}
+@media (prefers-reduced-motion:no-preference){.live.on i{animation:pulse 2s infinite}}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(92,207,134,.6)}70%{box-shadow:0 0 0 8px rgba(92,207,134,0)}100%{box-shadow:0 0 0 0 rgba(92,207,134,0)}}
+
+.map{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;position:relative}
+.stage{position:relative;overflow:hidden;background:radial-gradient(120% 90% at 50% 20%,#1a2230 0%,var(--panel) 70%);touch-action:none;perspective:900px}
+.stage svg{display:block;width:100%;height:auto;max-width:100%;transform-origin:50% 70%;transition:transform .5s ease;cursor:grab}
+.stage.tilt svg{transform:rotateX(42deg) scale(1.18) translateY(-4%)}
+.stage.drag svg{cursor:grabbing;transition:none}
+.ctrls{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px;z-index:2}
+.ctrls button{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:rgba(27,31,38,.85);color:var(--fg);font:600 17px var(--f-body);cursor:pointer;backdrop-filter:blur(6px)}
+.ctrls button[aria-pressed="true"]{border-color:var(--signal);color:var(--signal)}
+.modes{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px}
+.modes button{font:600 13px var(--f-body);border:0;background:none;color:var(--muted);padding:7px 14px;border-radius:999px;cursor:pointer}
+.modes button[aria-pressed="true"]{background:var(--signal);color:var(--signal-ink)}
+
+.pts{font:600 13px var(--f-body);background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:999px;padding:7px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;font-variant-numeric:tabular-nums}
+.pts b{color:var(--signal)}
+.pts.prem{border-color:var(--signal)}
+.ad{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;background:repeating-linear-gradient(135deg,var(--panel) 0 14px,#1d2129 14px 28px);border:1px dashed var(--line);border-radius:12px;padding:12px}
+.ad .lbl{font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:2px 6px}
+.ad .txt{font-size:13.5px;min-width:0}
+.ad .txt small{display:block;color:var(--muted);font-size:12px}
+.linkbtn{font:inherit;font-size:12px;background:none;border:0;color:var(--signal);padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.notebox{display:flex;flex-direction:column;gap:6px}
+.notebox textarea{min-height:64px;font-size:15px}
+.notetxt{font-size:13px;background:var(--panel-2);border-radius:8px;padding:8px 10px;overflow-wrap:anywhere;white-space:pre-wrap}
+.notetxt::before{content:"Deine Notiz: ";color:var(--signal);font-weight:600}
+.balance{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.balance b{font:700 52px/1 var(--f-display);color:var(--signal);font-variant-numeric:tabular-nums}
+.earn{display:grid;grid-template-columns:1fr auto;gap:6px 14px;font-size:14px;margin:0}
+.earn dt{color:var(--fg)} .earn dd{margin:0;font-family:var(--f-mono);font-size:13px;text-align:right;color:var(--ok)}
+.earn dd.neg{color:var(--t-blitz)}
+.offers{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.offer{display:flex;flex-direction:column;gap:6px;background:var(--asphalt);border:1px solid var(--line);border-radius:12px;padding:14px;text-align:left;font:inherit;color:var(--fg);cursor:pointer}
+.offer:disabled{opacity:.45;cursor:default}
+.offer .d{font:700 24px var(--f-display);text-transform:uppercase}
+.offer .c{font-family:var(--f-mono);font-size:12.5px;color:var(--signal)}
+.premtag{font:600 12px var(--f-body);color:var(--signal-ink);background:var(--signal);border-radius:999px;padding:3px 10px}
+.watch{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--asphalt);border:1px solid var(--line);border-radius:12px;padding:12px 14px;flex-wrap:wrap}
+.watch div{min-width:0;font-size:14px}.watch small{display:block;color:var(--muted);font-size:12px}
+.adv{position:fixed;inset:0;z-index:40;background:#07090c;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:22px;padding:calc(20px + env(safe-area-inset-top,0px)) 16px calc(20px + env(safe-area-inset-bottom,0px));text-align:center;box-sizing:border-box}
+.adv .lbl{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:3px 8px}
+.adv .spot{font:700 40px/1.05 var(--f-display);text-transform:uppercase;max-width:14ch;text-wrap:balance}
+.adv .spot span{color:var(--signal)}
+.adv p{color:var(--muted);margin:0;max-width:40ch}
+.adv .prog2{width:min(320px,100%);height:8px;background:var(--panel-2);border-radius:999px;overflow:hidden}
+.adv .prog2 i{display:block;height:100%;width:0;background:var(--signal);transition:width 1s linear}
+.adv .cnt{font-family:var(--f-mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.adv .row2{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.confirm{display:grid;grid-template-columns:56px 1fr;gap:14px;align-items:center;background:var(--asphalt);border:1px solid var(--line);border-radius:14px;padding:14px}
+.confirm .badge{width:56px;height:56px;font-size:28px}
+.confirm .badge.tri{height:56px;padding-top:10px}
+.confirm .t1{font:700 22px/1.15 var(--f-display);text-transform:uppercase;letter-spacing:.02em}
+.sendbtn{position:relative;overflow:hidden}
+.sendbtn::before{content:"";position:absolute;inset:0;width:var(--p,0%);background:rgba(0,0,0,.18);transition:width .1s linear}
+.sendbtn span{position:relative}
+.chipbtn.pick{border-color:var(--signal);color:var(--signal)}
+.dz{display:flex;flex-direction:column;gap:8px;background:var(--asphalt);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.dz.mine{border-color:var(--signal)}
+.dz .top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.dz .nm{font-weight:600;overflow-wrap:anywhere;min-width:0}
+.dz .pc{font-family:var(--f-mono);font-size:12.5px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.dz .gr{color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+.dz .vbar{height:6px;background:var(--panel-2);border-radius:999px;overflow:hidden}
+.dz .vbar i{display:block;height:100%;background:var(--signal)}
+.geoblock{position:fixed;inset:0;z-index:60;background:var(--asphalt);display:flex;flex-direction:column;justify-content:center;gap:16px;padding:calc(24px + env(safe-area-inset-top,0px)) 24px calc(24px + env(safe-area-inset-bottom,0px));box-sizing:border-box}
+.geoblock h2{font:700 34px/1.05 var(--f-display);text-transform:uppercase;color:var(--fg);letter-spacing:.02em;margin:0}
+.geoblock p{margin:0;max-width:44ch;color:var(--muted)}
+.geonote{background:var(--panel);border:1px solid var(--signal);border-radius:12px;padding:12px 14px;font-size:13.5px}
+/* Premium */
+.plan{display:flex;flex-direction:column;gap:12px;background:var(--asphalt);border:1px solid var(--signal);border-radius:16px;padding:16px}
+.plan-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.plan-head .pn{font:700 26px/1 var(--f-display);text-transform:uppercase;letter-spacing:.03em;display:block}
+.plan-head .ps{font-size:13px;color:var(--muted);display:block;margin-top:4px}
+.plan-price{text-align:right;white-space:nowrap}
+.plan-price b{font:700 36px/1 var(--f-display);color:var(--signal);font-variant-numeric:tabular-nums}
+.plan-price span{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.perks{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;font-size:13.5px}
+.perks li{display:flex;gap:7px;align-items:baseline;min-width:0}
+.perks li::before{content:"";flex:none;width:7px;height:7px;border-radius:2px;background:var(--signal);transform:translateY(-1px)}
+.tiers{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.tier{font:700 16px var(--f-display);letter-spacing:.02em;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:9px 2px 8px;cursor:pointer;font-variant-numeric:tabular-nums;display:flex;flex-direction:column;align-items:center;gap:1px}
+.tier small{font:500 10.5px var(--f-body);color:var(--muted);letter-spacing:0}
+.tier[aria-checked="true"]{border-color:var(--signal);color:var(--signal);background:#2a2410}
+.stepper{display:flex;align-items:center;justify-content:center;gap:16px}
+.stepper button{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--fg);font:600 22px var(--f-body);cursor:pointer;line-height:1}
+.stepper button:disabled{opacity:.35;cursor:default}
+.stepper output{font:700 32px var(--f-display);min-width:5.5ch;text-align:center;font-variant-numeric:tabular-nums}
+.impact{font-size:13.5px;margin:0;color:var(--fg)}
+.impact b{color:var(--signal)}
+.fine{font-size:11.5px;color:var(--muted);margin:0}
+.or{display:flex;align-items:center;gap:10px;color:var(--muted);font:600 12px var(--f-mono);text-transform:uppercase;letter-spacing:.1em}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
+/* Strecken-Check */
+.route{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.route .rh{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.route .rk{font:600 11px var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.route .rt{font:700 22px/1.05 var(--f-display);text-transform:uppercase;letter-spacing:.02em;overflow-wrap:anywhere;margin-top:3px}
+.route .rv{font-size:12.5px;color:var(--muted);margin-top:3px}
+.rstat{flex:none;font:700 13px var(--f-body);border-radius:999px;padding:6px 11px;white-space:nowrap}
+.rstat.ok{background:rgba(92,207,134,.14);color:var(--ok)}
+.rstat.warn{background:rgba(242,183,5,.16);color:var(--signal)}
+.rstat.alarm{background:rgba(255,45,111,.16);color:var(--t-falsch)}
+.rrows{display:flex;flex-direction:column;gap:7px}
+.rrow{display:grid;grid-template-columns:24px 1fr auto;gap:10px;align-items:center;font-size:14px;background:none;border:0;color:inherit;padding:0;text-align:left;cursor:pointer;font-family:inherit}
+.rrow span{min-width:0;overflow-wrap:anywhere}
+.rrow time{font:400 11.5px var(--f-mono);color:var(--muted);white-space:nowrap}
+.rdot{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font:700 13px var(--f-display);color:#111}
+.rdot.tri{border-radius:0;clip-path:polygon(50% 4%,98% 94%,2% 94%);padding-top:5px;box-sizing:border-box}
+.dusk{display:flex;gap:10px;align-items:flex-start;border-left:3px solid var(--signal);padding:8px 10px;background:var(--asphalt);border-radius:0 8px 8px 0;font-size:13px}
+.dusk b{display:block;font-size:13.5px}
+.rhot{font-size:12.5px;color:var(--muted)}
+.rhot b{color:var(--fg);font-weight:600}
+.racts{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.rtabs{display:flex;gap:6px;flex-wrap:wrap}
+.rtab{font:600 12.5px var(--f-body);background:var(--asphalt);color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:5px 10px;cursor:pointer}
+.rtab[aria-pressed="true"]{color:var(--fg);border-color:var(--fg)}
+.rform{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rform label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted);min-width:0}
+.rform .full{grid-column:1/-1}
+.rintro{font-size:13.5px;color:var(--muted);margin:0}
+.drive{position:fixed;inset:0;z-index:30;background:#07090c;color:var(--fg);overflow:hidden}
+.dstage{position:absolute;inset:0;perspective:760px;perspective-origin:50% 30%;overflow:hidden;background:radial-gradient(120% 60% at 50% 100%,#10161d 0%,#07090c 70%)}
+#dmap{position:absolute;left:50%;top:70%;width:180vmax;height:180vmax;transform:translate(-50%,-50%) rotateX(60deg);transform-origin:50% 50%}
+.dstage::after{content:"";position:absolute;left:0;right:0;top:0;height:46%;background:linear-gradient(#07090c 22%,rgba(7,9,12,0));pointer-events:none}
+.dtop{position:absolute;left:12px;right:12px;top:calc(12px + env(safe-area-inset-top,0px));display:flex;flex-direction:column;gap:6px;z-index:2}
+.dnext{display:grid;grid-template-columns:58px 1fr;gap:14px;align-items:center;background:rgba(17,21,27,.94);border:1px solid var(--line);border-radius:16px;padding:12px 14px;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+.dnext .badge{width:58px;height:58px;font-size:28px}
+.dnext .badge.tri{height:58px;padding-top:12px}
+.dnext .dist{font:700 34px/1 var(--f-display);font-variant-numeric:tabular-nums}
+.dnext .what{font:700 21px/1.1 var(--f-display);text-transform:uppercase;letter-spacing:.02em;margin-top:3px;overflow-wrap:anywhere}
+.dnext .where{font-size:14px;color:var(--muted);margin-top:2px;overflow-wrap:anywhere}
+.dnext.calm{grid-template-columns:58px 1fr}
+.dnext.calm .ico{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:rgba(92,207,134,.14);color:var(--ok);font:700 30px var(--f-display)}
+.dnext.alarm{border-color:var(--t-falsch);animation:dpulse 1s ease-in-out infinite alternate}
+@keyframes dpulse{from{box-shadow:0 0 0 0 rgba(255,45,111,.0)}to{box-shadow:0 0 0 6px rgba(255,45,111,.35)}}
+@media (prefers-reduced-motion:reduce){.dnext.alarm{animation:none}}
+.dmore{font-size:13px;color:var(--muted);padding:0 6px}
+.dbot{position:absolute;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px;z-index:2}
+.drow{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+.dspeed{width:76px;height:76px;border-radius:50%;background:rgba(17,21,27,.94);border:2px solid var(--line);display:grid;place-items:center;text-align:center;line-height:1}
+.dspeed b{display:block;font:700 30px var(--f-display);font-variant-numeric:tabular-nums}
+.dspeed span{font:500 11px var(--f-mono);color:var(--muted)}
+.dinfo{flex:1;min-width:0;text-align:right}
+.drive .clock{font:700 34px/1 var(--f-display);font-variant-numeric:tabular-nums}
+.drive .droute{font:600 12px var(--f-mono);color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-top:4px;overflow-wrap:anywhere}
+.dbtns{display:flex;gap:8px}
+.dbtns button{flex:1;font:600 15px var(--f-body);background:rgba(34,39,49,.96);color:var(--fg);border:1px solid var(--line);border-radius:12px;padding:13px 8px;cursor:pointer;min-height:48px}
+.dbtns button[aria-pressed="true"]{border-color:var(--ok);color:var(--ok)}
+.dbtns .exit{flex:0 0 auto;padding-inline:16px}
+.dnote{font-size:11.5px;color:var(--muted);text-align:center;line-height:1.35}
+.dsrc{display:inline-block;font:600 11px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;border-radius:6px;padding:2px 6px;background:rgba(242,183,5,.16);color:var(--signal);margin-left:6px;vertical-align:middle}
+.dsrc.gps{background:rgba(92,207,134,.14);color:var(--ok)}
+
+
+h2{font-family:var(--f-display);font-weight:600;font-size:18px;letter-spacing:.06em;text-transform:uppercase;margin:0;color:var(--muted)}
+.listhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.count{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.list{display:flex;flex-direction:column;gap:8px}
+.card{display:grid;grid-template-columns:44px 1fr;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;transition:border-color .2s;cursor:pointer}
+.card.sel{border-color:var(--signal)}
+.card .body{min-width:0;display:flex;flex-direction:column;gap:6px}
+.t1{font-weight:600;font-size:15px;overflow-wrap:anywhere}
+.t2{color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+.t2.hot{color:var(--signal)}
+.meta{display:flex;gap:10px;flex-wrap:wrap;font-family:var(--f-mono);font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.meta .left{color:var(--fg)}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.chipbtn{font:inherit;font-size:13px;font-weight:500;background:var(--panel-2);color:var(--fg);border:1px solid var(--line);border-radius:999px;padding:7px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.chipbtn:hover:not(:disabled){border-color:var(--muted)}
+.chipbtn.on{border-color:var(--ok);color:var(--ok)}
+.chipbtn.on.neg{border-color:var(--t-blitz);color:var(--t-blitz)}
+.chipbtn.warn{border-color:var(--t-blitz);color:var(--t-blitz)}
+.chipbtn:disabled{opacity:.45;cursor:default}
+.badge{width:44px;height:44px;display:grid;place-items:center;font-family:var(--f-display);font-weight:700;font-size:22px;color:#111;border-radius:50%}
+.badge.tri{border-radius:0;clip-path:polygon(50% 4%,98% 94%,2% 94%);padding-top:8px;box-sizing:border-box}
+
+.empty{background:var(--panel);border:1px dashed var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:12px}
+.empty p{margin:0;color:var(--muted);max-width:65ch}
+.example{opacity:.75;cursor:default}
+.tag{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--signal);border:1px solid var(--signal);border-radius:4px;padding:1px 6px;align-self:flex-start}
+
+.note{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px;max-width:65ch;margin:0}
+.note b{color:var(--fg);font-weight:600}
+
+.bar{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:linear-gradient(to top,var(--asphalt) 70%,rgba(19,22,27,0));display:flex;justify-content:center;align-items:stretch;gap:10px;z-index:5}
+.bar .bigbtn{flex:1;max-width:520px}
+.bigbtn{font-family:var(--f-display);font-weight:700;font-size:20px;letter-spacing:.06em;text-transform:uppercase;background:var(--signal);color:var(--signal-ink);border:0;border-radius:14px;padding:14px 22px;width:100%;max-width:688px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px}
+.bigbtn:disabled{opacity:.5;cursor:default}
+button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-visible,.card:focus-visible,svg .mk:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(86px + env(safe-area-inset-bottom,0px));background:var(--panel-2);border:1px solid var(--line);color:var(--fg);padding:10px 16px;border-radius:999px;font-size:13.5px;z-index:20;max-width:calc(100% - 32px);box-sizing:border-box;text-align:center}
+
+.gast{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(242,183,5,.08);border:1px solid rgba(242,183,5,.35);border-radius:14px;padding:12px 14px;font-size:13.5px}
+.gast p{margin:0;min-width:0}
+.gast b{color:var(--signal);font-family:var(--f-display);font-size:16px;letter-spacing:.06em;text-transform:uppercase;display:block}
+.gast .chipbtn{flex:0 0 auto;border-color:var(--signal);color:var(--signal);font-weight:600;padding:9px 14px}
+.stars{display:flex;gap:6px}
+.stars button{flex:1;font-size:30px;line-height:1;background:var(--asphalt);border:1px solid var(--line);border-radius:12px;padding:10px 0;color:var(--line);cursor:pointer}
+.stars button[aria-checked="true"],.stars button.lit{color:var(--signal);border-color:rgba(242,183,5,.5)}
+.flab{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+.fq{display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--muted)}
+a.bigbtn{text-decoration:none;box-sizing:border-box}
+.sheet{position:fixed;inset:0;background:rgba(5,6,8,.6);display:flex;align-items:flex-end;justify-content:center;z-index:10}
+.panel{background:var(--panel);border:1px solid var(--line);border-bottom:0;border-radius:18px 18px 0 0;width:100%;max-width:720px;max-height:92%;overflow:auto;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;box-sizing:border-box}
+.panel h3{font-family:var(--f-display);font-size:24px;text-transform:uppercase;margin:0;letter-spacing:.03em}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.x{background:none;border:0;color:var(--muted);font-size:26px;cursor:pointer;line-height:1;padding:4px 8px}
+textarea,select,input[type=text]{font:inherit;font-size:16px;color:var(--fg);background:var(--asphalt);border:1px solid var(--line);border-radius:10px;padding:11px 12px;width:100%;box-sizing:border-box}
+textarea{min-height:92px;resize:vertical}
+.hint{font-size:12.5px;color:var(--muted);margin:-6px 0 0}
+.quick{display:flex;gap:8px;flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid2 label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted);min-width:0}
+.grid2 .full{grid-column:1/-1}
+@media (max-width:420px){.grid2{grid-template-columns:1fr}}
+.status{font-family:var(--f-mono);font-size:12px;color:var(--muted);min-height:16px}
+.status.err{color:var(--t-blitz)}
+.result{display:flex;flex-direction:column;gap:12px}
+.secbtn{font-family:var(--f-display);font-weight:600;font-size:18px;letter-spacing:.05em;text-transform:uppercase;background:var(--panel-2);color:var(--fg);border:1px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;width:100%}
+.secbtn:disabled{opacity:.5;cursor:default}
+
+svg .town{fill:var(--panel-2);stroke:var(--muted);stroke-width:2}
+svg .tlabel{fill:#a3a9b2;font-family:var(--f-body);font-size:28px;paint-order:stroke;stroke:#13161b;stroke-width:5px;stroke-linejoin:round}
+svg .tlabel.big{fill:var(--fg);font-weight:600}
+svg .road{fill:none;stroke:var(--road);stroke-width:9;stroke-linecap:round;stroke-linejoin:round}
+svg .road.a{stroke:var(--road-a);stroke-width:12}
+svg .rname{font-family:var(--f-display);font-weight:700;font-size:22px}
+svg .rhein{fill:none;stroke:var(--water);stroke-width:16;stroke-linecap:round;stroke-linejoin:round}
+svg .rlabel{fill:var(--water-ink);font-family:var(--f-body);font-style:italic;font-size:22px}
+svg .cc{fill:var(--road);font-family:var(--f-display);font-weight:700;font-size:44px;letter-spacing:.1em}
+svg .mk{cursor:pointer}
+svg .mk text{font-family:var(--f-display);font-weight:700;font-size:26px;fill:#111;pointer-events:none}
+svg .halo{fill:none;stroke:var(--signal);stroke-width:3;opacity:0}
+svg .mk.sel .halo{opacity:1}
+@media (prefers-reduced-motion:no-preference){
+  svg .ping{transform-box:fill-box;transform-origin:center;animation:ping 2.2s ease-out infinite}
+  @keyframes ping{0%{transform:scale(.6);opacity:.7}100%{transform:scale(2.2);opacity:0}}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="appbar">
+    <div class="brand">
+      <h1>Gefahren <span>&amp; Co</span></h1>
+      <div class="live" id="live"><i></i><span>Landkreis Lörrach · </span><span id="livetxt">verbinde…</span></div>
+    </div>
+    <button class="pts" id="pts" type="button" aria-label="Punkte und Premium"><b>★</b><span id="ptsnum">0</span></button>
+  </header>
+
+  <div class="gast" id="gast" hidden><p><b>Testversion</b>Probier alles aus. Deine Meldungen und Punkte bleiben nur auf deinem Gerät.</p><button class="chipbtn" type="button" id="gast-fb">Meinung sagen</button></div>
+
+  <section class="route" id="route" aria-label="Strecken-Check"></section>
+
+  <div class="filters" id="filters" role="group" aria-label="Meldungen filtern"></div>
+
+  <section class="map" aria-label="Karte Landkreis Lörrach">
+    <div class="stage" id="stage">
+      <svg id="map" viewBox="0 0 950 960" role="img" aria-label="Karte mit aktiven Meldungen. Ziehen zum Verschieben, Zoom über die Knöpfe"></svg>
+      <div class="ctrls">
+        <button type="button" id="z-in" aria-label="Hineinzoomen">+</button>
+        <button type="button" id="z-out" aria-label="Herauszoomen">−</button>
+        <button type="button" id="z-3d" aria-pressed="false" aria-label="3D-Ansicht">3D</button>
+        <button type="button" id="z-reset" aria-label="Ganze Karte zeigen">⤢</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="geonote" id="geonote" hidden>Du scheinst in Frankreich zu sein. Dort sind Blitzer-Warnungen verboten, deshalb sind Blitzer und Kontrollen ausgeblendet.</div>
+  <section style="display:flex;flex-direction:column;gap:10px">
+    <div class="listhead"><h2>Aktive Meldungen</h2><span class="count" id="count"></span></div>
+    <div class="list" id="list"></div>
+  </section>
+
+  <p class="note">Blitzer nur als Beifahrer melden und ansehen (§ 23 Abs. 1c StVO). Alle Angaben ohne Gewähr.</p>
+</div>
+
+<div class="geoblock" id="geoblock" hidden role="alertdialog" aria-labelledby="gbh">
+  <h2 id="gbh">In der Schweiz nicht verfügbar</h2>
+  <p>Nach Schweizer Recht (Art. 98a Strassenverkehrsgesetz) sind öffentliche Warnungen vor Verkehrskontrollen verboten. Deshalb wird diese App in der Schweiz nicht angeboten.</p>
+  <p>Disponible uniquement en Allemagne. Non disponibile in Svizzera.</p>
+</div>
+
+<div class="drive" id="drive" hidden role="dialog" aria-modal="true" aria-label="Fahrermodus">
+  <div class="dstage" aria-hidden="true">
+    <svg id="dmap" viewBox="-600 -600 1200 1200">
+      <defs><pattern id="dgrid" width="80" height="80" patternUnits="userSpaceOnUse"><path d="M80 0H0V80" fill="none" stroke="#ffffff" stroke-opacity=".05" stroke-width="2"/></pattern>
+        <radialGradient id="dme" r=".5"><stop offset="0" stop-color="#58a6ff" stop-opacity=".45"/><stop offset="1" stop-color="#58a6ff" stop-opacity="0"/></radialGradient></defs>
+      <g id="dworld"></g>
+      <g id="dbill"></g>
+      <circle r="90" fill="url(#dme)"/>
+      <path d="M0 -38 L28 30 L0 16 L-28 30 Z" fill="#58a6ff" stroke="#eaf3ff" stroke-width="5" stroke-linejoin="round"/>
+    </svg>
+  </div>
+  <div class="dtop" aria-live="polite">
+    <div class="dnext calm" id="d-next"><div class="ico">✓</div><div><div class="what">Freie Fahrt</div><div class="where">Keine Gefahren vor dir</div></div></div>
+    <div class="dmore" id="d-more"></div>
+  </div>
+  <div class="dbot">
+    <div class="drow">
+      <div class="dspeed" aria-label="Geschwindigkeit"><div><b id="d-speed">–</b><span>km/h</span></div></div>
+      <div class="dinfo"><div class="clock" id="d-clock">--:--</div><div class="droute"><span id="d-route"></span><span class="dsrc" id="d-src">Demo</span></div></div>
+    </div>
+    <div class="dbtns">
+      <button id="d-voice" type="button" aria-pressed="true">🔊 Ansage an</button>
+      <button id="d-demo" type="button" aria-pressed="false">Demo-Fahrt</button>
+      <button class="exit" id="d-exit" type="button">Beenden</button>
+    </div>
+    <div class="dnote" id="d-note">Ohne Blitzer und Kontrollen (§ 23 Abs. 1c StVO). Im Browser warnt der Fahrermodus nur, solange er offen ist – im Hintergrund geht das in der App.</div>
+  </div>
+</div>
+
+<div class="sheet" id="fsheet" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="fsh">
+    <div class="row"><h3 id="fsh">Deine Meinung</h3><button class="x" id="fclose" type="button" aria-label="Schließen">×</button></div>
+    <p class="hint" style="margin:0">Das ist eine Testversion. Sag ruhig ehrlich, was gut ist und was nicht. Genau das hilft am meisten.</p>
+    <div class="fq">Wie gefällt dir die App insgesamt?
+      <div class="stars" id="f-stars" role="radiogroup" aria-label="Bewertung von 1 bis 5 Sternen">
+        <button type="button" role="radio" aria-checked="false" data-s="1" aria-label="1 Stern">★</button><button type="button" role="radio" aria-checked="false" data-s="2" aria-label="2 Sterne">★</button><button type="button" role="radio" aria-checked="false" data-s="3" aria-label="3 Sterne">★</button><button type="button" role="radio" aria-checked="false" data-s="4" aria-label="4 Sterne">★</button><button type="button" role="radio" aria-checked="false" data-s="5" aria-label="5 Sterne">★</button>
+      </div></div>
+    <label class="flab">Was gefällt dir?<textarea id="f-gut" maxlength="800" placeholder="z. B. Melden geht schnell, Fahrermodus ist gut …"></textarea></label>
+    <label class="flab">Was fehlt oder nervt?<textarea id="f-schlecht" maxlength="800" placeholder="z. B. Knopf zu klein, Ort falsch erkannt …"></textarea></label>
+    <div class="fq">Würdest du die App nutzen?<div class="quick" data-fq="nutzen"><button class="chipbtn" type="button" data-v="Ja">Ja</button><button class="chipbtn" type="button" data-v="Vielleicht">Vielleicht</button><button class="chipbtn" type="button" data-v="Eher nicht">Eher nicht</button></div></div>
+    <div class="fq">Premium für 4,99 € im Monat?<div class="quick" data-fq="premium"><button class="chipbtn" type="button" data-v="Würde ich holen">Würde ich holen</button><button class="chipbtn" type="button" data-v="Lieber mit Punkten">Lieber mit Punkten</button><button class="chipbtn" type="button" data-v="Eher nicht">Eher nicht</button></div></div>
+    <a class="bigbtn" id="f-send" href="#" target="_blank" rel="noopener">Per WhatsApp senden</a>
+    <button class="chipbtn" type="button" id="f-copy" style="align-self:center">Text kopieren</button>
+    <p class="fine" style="text-align:center">Öffnet WhatsApp mit deinem Text an Marco. Abgeschickt wird erst, wenn du dort auf Senden tippst.</p>
+  </div>
+</div>
+
+<div class="sheet" id="psheet" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="psh">
+    <div class="row"><h3 id="psh">Premium</h3><button class="x" id="pclose" type="button" aria-label="Schließen">×</button></div>
+    <section class="plan" aria-label="Premium-Abo">
+      <div class="plan-head">
+        <div><span class="pn">Premium</span><span class="ps">Gefahren &amp; Co · monatlich kündbar</span></div>
+        <div class="plan-price"><b id="pr-val">4,99 €</b><span>pro Monat</span></div>
+      </div>
+      <ul class="perks"><li>Keine Werbung</li><li>Bis zu 3 Strecken</li><li>Eigene Notizen zu Stellen</li><li>Mitbestimmen bei der Spende</li></ul>
+      <div class="tiers" role="radiogroup" aria-label="Betrag wählen" id="tiers">
+        <button class="tier" type="button" role="radio" data-p="4.99" aria-checked="true">4,99<small>Standard</small></button>
+        <button class="tier" type="button" role="radio" data-p="6.99" aria-checked="false">6,99<small>Unterstützer</small></button>
+        <button class="tier" type="button" role="radio" data-p="9.99" aria-checked="false">9,99<small>Förderer</small></button>
+        <button class="tier" type="button" role="radio" data-p="custom" aria-checked="false">Eigener<small>Betrag</small></button>
+      </div>
+      <div class="stepper" id="pr-custom" hidden>
+        <button type="button" id="pr-minus" aria-label="1 Euro weniger">−</button>
+        <output id="pr-out" aria-live="polite">12,99 €</output>
+        <button type="button" id="pr-plus" aria-label="1 Euro mehr">+</button>
+      </div>
+      <p class="impact" id="pr-impact"></p>
+      <button class="bigbtn" id="pr-buy" type="button">Premium für 4,99 € holen</button>
+      <p class="fine">Abrechnung später über App Store bzw. Google Play. Der Betrag über 4,99 € ist eine freiwillige Unterstützung des Projekts, keine steuerlich absetzbare Spende. Im Prototyp gibt es noch keine echte Zahlung: Der Knopf schaltet Premium 30 Tage zum Testen frei.</p>
+    </section>
+    <div class="or">oder kostenlos mit Punkten</div>
+    <div class="balance"><b id="pbal">0</b><span>Punkte verfügbar</span><span id="pprem"></span></div>
+    <h2>So sammelst du Punkte</h2>
+    <dl class="earn">
+      <dt>Deine Meldung wird von jemand anderem bestätigt</dt><dd>+10</dd>
+      <dt>Jede weitere Bestätigung deiner Meldung</dt><dd>+2 (max. +10)</dd>
+      <dt>Du bestätigst eine fremde Meldung mit „Noch da“</dt><dd>+1 (max. 10/Tag)</dd>
+      <dt>Werbespot ansehen</dt><dd>+5 (1× pro Tag)</dd>
+    </dl>
+    <div class="watch"><div>Werbespot ansehen<small id="wsub">1× pro Tag · nur im Stand, nicht während der Fahrt</small></div><button class="chipbtn on" id="wbtn" type="button">▶ +5 Punkte</button></div>
+    <h2>Mit Punkten einlösen</h2>
+    <div class="offers">
+      <button class="offer" type="button" data-cost="200" data-days="7"><span class="d">7 Tage</span><span class="c">200 Punkte</span></button>
+      <button class="offer" type="button" data-cost="500" data-days="30"><span class="d">30 Tage</span><span class="c">500 Punkte</span></button>
+    </div>
+    <div class="status" id="pstatus" aria-live="polite"></div>
+  </div>
+</div>
+
+<div class="sheet" id="dsheet" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="dsh">
+    <div class="row"><h3 id="dsh">Wohin spenden wir?</h3><button class="x" id="dclose" type="button" aria-label="Schließen">×</button></div>
+    <div class="t2" id="dround"></div>
+    <p class="hint" style="margin:0">50 % des Gewinns aus Premium gehen an das Ziel mit den meisten Stimmen. Vorschlagen und abstimmen können Premium-Mitglieder, eine Stimme pro Runde. Nur gemeinnützige Organisationen mit Spendenquittung; jeder Vorschlag wird vor der Auszahlung geprüft.</p>
+    <div class="list" id="dlist"></div>
+    <div class="result" id="dform">
+      <h2>Ziel vorschlagen</h2>
+      <input type="text" id="d-name" maxlength="70" placeholder="Organisation, z. B. ein Förderverein aus der Region">
+      <input type="text" id="d-grund" maxlength="140" placeholder="Warum? Ein Satz genügt">
+      <button class="secbtn" id="d-add" type="button">Vorschlag einreichen</button>
+    </div>
+    <div class="status" id="dstatus" aria-live="polite"></div>
+  </div>
+</div>
+
+<div class="adv" id="adv" hidden role="dialog" aria-modal="true" aria-label="Werbespot">
+  <span class="lbl">Anzeige · Partner der Woche</span>
+  <div class="spot">Hier läuft dein <span>Werbespot</span></div>
+  <p>Platzhalter für den Spot eines lokalen Partners. In der echten App kommt hier ein 15-Sekunden-Video.</p>
+  <div class="prog2"><i id="advbar"></i></div>
+  <div class="cnt" id="advcnt">noch 15 Sek.</div>
+  <div class="row2"><button class="bigbtn" id="advclaim" type="button" style="width:auto" disabled>+5 Punkte abholen</button><button class="chipbtn" id="advstop" type="button">Abbrechen</button></div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<nav class="bar" aria-label="Hauptmenü">
+  <button class="navbtn" id="m-fahr" type="button"><span class="ic" aria-hidden="true">◉</span>Fahrt</button>
+  <button class="bigbtn" id="open" type="button">＋ Melden</button>
+  <button class="navbtn" id="more" type="button"><span class="ic" aria-hidden="true">☰</span>Mehr</button>
+</nav>
+
+<div class="sheet" id="msheet" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="mh">
+    <div class="row"><h3 id="mh">Mehr</h3><button class="x" id="mclose" type="button" aria-label="Schließen">×</button></div>
+    <div class="menu">
+      <button type="button" id="mi-pts"><b>★ Premium &amp; Punkte</b><span>Abo ab 4,99 €, eigener Betrag, Punkte einlösen</span></button>
+      <button type="button" id="don"><b>♥ Wohin spenden wir?</b><span>Vorschläge und Abstimmung der Premium-Mitglieder</span></button>
+      <button type="button" id="mi-fahr"><b>◉ Fahrermodus</b><span>Große Anzeige, Ansagen, ohne Blitzer</span></button>
+      <button type="button" id="mi-fb"><b>💬 Meinung sagen</b><span>Was gefällt dir, was fehlt? Geht direkt an Marco</span></button>
+    </div>
+    <h2>Gut zu wissen</h2>
+    <ul class="facts">
+      <li>Fahrer dürfen Blitzer-Warnungen während der Fahrt nicht nutzen (§ 23 Abs. 1c StVO). Bitte nur als Beifahrer melden und ansehen.</li>
+      <li>In der Schweiz ist die App nicht verfügbar, in Frankreich sind Blitzer ausgeblendet.</li>
+      <li>Meldungen laufen automatisch ab und verschwinden früher, wenn andere „Weg“ antippen.</li>
+      <li>Alle Angaben ohne Gewähr.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="sh">
+    <div class="row"><h3 id="sh">Was ist los?</h3><button class="x" id="close" type="button" aria-label="Schließen">×</button></div>
+    <div id="step1" class="result">
+      <textarea id="txt" maxlength="400" placeholder="Einfach sagen, was los ist, z. B. „Blitzer in Steinen Richtung Schopfheim“"></textarea>
+      <p class="hint" id="hint1">🎤 Tipp aufs Mikrofon deiner Tastatur und sprich. Art, Ort, Straße und Richtung erkennt die App selbst.</p>
+      <div class="quick" id="quick" role="group" aria-label="Art vorwählen (optional)"></div>
+      <button class="bigbtn" id="go" type="button">Melden</button>
+    </div>
+    <div class="status" id="status" aria-live="polite"></div>
+    <div id="step2" class="result" hidden>
+      <div class="confirm" id="confirm"></div>
+      <div id="askort" hidden><div class="t2" style="margin-bottom:8px">Wo genau? Tippe den Ort an:</div><div class="quick" id="ortchips"></div>
+        <select id="ortsel" style="margin-top:10px" aria-label="Anderer Ort"></select></div>
+      <button class="bigbtn sendbtn" id="send" type="button"><span id="sendtxt">Eintragen</span></button>
+      <div class="row" style="justify-content:center;gap:22px"><button class="linkbtn" id="edit" type="button">Ändern</button><button class="linkbtn" id="back" type="button">Neu sagen</button></div>
+      <div class="result" id="result" hidden>
+        <div class="grid2">
+          <label>Art<select id="f-typ"></select></label>
+          <label>Genauer<select id="f-art"></select></label>
+          <label>Ort<select id="f-ort"></select></label>
+          <label>Straße<input type="text" id="f-str" maxlength="40" placeholder="z. B. B317"></label>
+          <label>Richtung<input type="text" id="f-ri" maxlength="40" placeholder="z. B. Schopfheim"></label>
+          <label class="full">Wie lange anzeigen?<select id="f-dur"><option value="std">Standard</option><option value="tag">Rest des Tages (bis 23:59)</option></select></label>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ================= Stammdaten ================= */
+const TOWNS={
+  "Lörrach":[47.6156,7.6614],"Weil am Rhein":[47.5947,7.6106],"Rheinfelden":[47.5606,7.7878],
+  "Grenzach-Wyhlen":[47.5500,7.6750],"Inzlingen":[47.5878,7.6922],"Binzen":[47.6297,7.6250],
+  "Efringen-Kirchen":[47.6553,7.5631],"Kandern":[47.7136,7.6625],"Schliengen":[47.7569,7.5789],
+  "Bad Bellingen":[47.7311,7.5517],"Steinen":[47.6447,7.7381],"Maulburg":[47.6461,7.7817],
+  "Schopfheim":[47.6500,7.8236],"Hausen":[47.6844,7.8392],"Zell im Wiesental":[47.7067,7.8500],
+  "Schönau":[47.7869,7.8936],"Todtnau":[47.8292,7.9458],
+  /* weitere Gemeinden und Dörfer (Koordinaten ungefähr, ca. 1–2 km genau) */
+  "Rümmingen":[47.641,7.645],"Eimeldingen":[47.633,7.597],"Fischingen":[47.651,7.607],"Schallbach":[47.659,7.640],"Wittlingen":[47.656,7.657],
+  "Malsburg-Marzell":[47.765,7.700],"Hasel":[47.656,7.900],"Häg-Ehrsberg":[47.722,7.888],"Fröhnd":[47.757,7.881],
+  "Tunau":[47.786,7.875],"Wembach":[47.777,7.898],"Schönenberg":[47.778,7.903],"Böllen":[47.786,7.840],"Aitern":[47.810,7.900],
+  "Utzenfeld":[47.807,7.921],"Wieden":[47.833,7.880],
+  "Tegernau":[47.718,7.781],"Wies":[47.738,7.770],"Wieslet":[47.697,7.770],"Sallneck":[47.700,7.750],"Raich":[47.708,7.795],
+  "Elbenschwand":[47.744,7.746],"Bürchau":[47.763,7.795],"Neuenweg":[47.792,7.805]
+};
+/* Nur diese Orte bekommen eine Beschriftung auf der Übersichtskarte; alle anderen erscheinen als Punkt */
+const MAP_LABELS=new Set(["Lörrach","Weil am Rhein","Rheinfelden","Grenzach-Wyhlen","Inzlingen","Binzen","Efringen-Kirchen","Kandern","Schliengen","Bad Bellingen","Steinen","Maulburg","Schopfheim","Hausen","Zell im Wiesental","Schönau","Todtnau","Tegernau"]);
+/* Gemeinde für Dörfer, die zu einer größeren Gemeinde gehören */
+const GEMEINDE={"Tegernau":"Kleines Wiesental","Wies":"Kleines Wiesental","Wieslet":"Kleines Wiesental","Sallneck":"Kleines Wiesental","Raich":"Kleines Wiesental","Elbenschwand":"Kleines Wiesental","Bürchau":"Kleines Wiesental","Neuenweg":"Kleines Wiesental"};
+const BIG=new Set(["Lörrach","Weil am Rhein","Rheinfelden","Schopfheim"]);
+/* Label-Position je Ort: [dx, dy, anchor] – verhindert Überlappungen */
+const LABEL={"Steinen":[0,42,"middle"],"Maulburg":[0,-16,"middle"],"Inzlingen":[14,36,"start"],"Schönau":[-14,-10,"end"],"Todtnau":[-14,-10,"end"],"Tegernau":[14,-10,"start"]};
+/* Ortsteile, Spitznamen und Orte im Landkreis → Gemeinde auf der Karte */
+const ALIAS={
+  "loerrach":"Lörrach","loe":"Lörrach","haagen":"Lörrach","brombach":"Lörrach","hauingen":"Lörrach","tumringen":"Lörrach","stetten":"Lörrach","salzert":"Lörrach","tuellinger":"Lörrach","tuellingen":"Lörrach",
+  "weil":"Weil am Rhein","haltingen":"Weil am Rhein","maerkt":"Weil am Rhein","oetlingen":"Weil am Rhein","friedlingen":"Weil am Rhein","otterbach":"Weil am Rhein","dreilaenderbruecke":"Weil am Rhein","rheincenter":"Weil am Rhein",
+  "herten":"Rheinfelden","degerfelden":"Rheinfelden","nollingen":"Rheinfelden","warmbach":"Rheinfelden","karsau":"Rheinfelden","beuggen":"Rheinfelden","minseln":"Rheinfelden","adelhausen":"Rheinfelden","eichsel":"Rheinfelden","riedmatt":"Rheinfelden",
+  "grenzach":"Grenzach-Wyhlen","wyhlen":"Grenzach-Wyhlen",
+  "fahrnau":"Schopfheim","wiechs":"Schopfheim","langenau":"Schopfheim","gersbach":"Schopfheim","eichen":"Schopfheim","raitbach":"Schopfheim",
+  "hoellstein":"Steinen","haegelberg":"Steinen","huesingen":"Steinen","schlaechtenhaus":"Steinen","endenburg":"Steinen","weitenau":"Steinen",
+  "zell":"Zell im Wiesental","atzenbach":"Zell im Wiesental","mambach":"Zell im Wiesental","riedichen":"Zell im Wiesental","pfaffenberg":"Zell im Wiesental","gresgen":"Zell im Wiesental","adelsberg":"Zell im Wiesental",
+  "wollbach":"Kandern","holzen":"Kandern","tannenkirch":"Kandern","riedlingen":"Kandern","feuerbach":"Kandern","sitzenkirch":"Kandern",
+  "efringen":"Efringen-Kirchen","kirchen":"Efringen-Kirchen","istein":"Efringen-Kirchen","huttingen":"Efringen-Kirchen","blansingen":"Efringen-Kirchen","egringen":"Efringen-Kirchen","mappach":"Efringen-Kirchen","welmlingen":"Efringen-Kirchen","wintersweiler":"Efringen-Kirchen",
+  "kleines wiesental":"Tegernau","kleinen wiesental":"Tegernau","marzell":"Malsburg-Marzell","malsburg":"Malsburg-Marzell","vogelbach":"Malsburg-Marzell",
+  "haeg":"Häg-Ehrsberg","ehrsberg":"Häg-Ehrsberg","gaeschwend":"Häg-Ehrsberg","enkenstein":"Schopfheim",
+  "liel":"Schliengen","mauchen":"Schliengen","obereggenen":"Schliengen","niedereggenen":"Schliengen",
+  "bellingen":"Bad Bellingen","bamlach":"Bad Bellingen","rheinweiler":"Bad Bellingen","hertingen":"Bad Bellingen",
+  "schoenau":"Schönau","belchen":"Schönau","multen":"Aitern","haldenhof":"Malsburg-Marzell",
+  "todtnauberg":"Todtnau","aftersteg":"Todtnau","brandenberg":"Todtnau","fahl":"Todtnau","geschwend":"Todtnau","muggenbrunn":"Todtnau","praeg":"Todtnau","feldberg":"Todtnau",
+  "hausen im wiesental":"Hausen"};
+/* Grenzübergänge und bekannte Stellen: Erkennungsmuster → Ort + Straße */
+const SPOTS=[
+  {re:/(autobahn)?zoll\s*(weil|otterbach)|weil[\s-]*otterbach|autobahnzoll\s*weil/,ort:"Weil am Rhein",str:"A5",kurz:"Grenzübergang Weil-Otterbach"},
+  {re:/zoll\s*rheinfelden|rheinfelden\s*zoll|autobahnzoll\s*rheinfelden|a\s?861/,ort:"Rheinfelden",str:"A861",kurz:"Grenzübergang Rheinfelden"},
+  {re:/zoll\s*stetten|stetten\s*zoll|zoll\s*loerrach|loerrach\s*zoll/,ort:"Lörrach",str:"",kurz:"Grenzübergang Lörrach-Stetten"},
+  {re:/zoll\s*grenzach|grenzach\s*zoll|hoernli/,ort:"Grenzach-Wyhlen",str:"B34",kurz:"Grenzübergang Grenzach"},
+  {re:/zollfreie/,ort:"Lörrach",str:"Zollfreie Straße",kurz:""},
+  {re:/dreilaenderbruecke/,ort:"Weil am Rhein",str:"",kurz:"Dreiländerbrücke"}
+];
+const ROADS=[
+  {n:"A5",a:true,p:[[47.87,7.585],"Schliengen","Efringen-Kirchen",[47.61,7.595],"Weil am Rhein"]},
+  {n:"A98",a:true,p:["Weil am Rhein",[47.60,7.64],"Lörrach",[47.58,7.71],"Rheinfelden",[47.575,7.95]]},
+  {n:"B317",p:["Lörrach","Steinen","Maulburg","Schopfheim","Hausen","Zell im Wiesental","Schönau","Todtnau",[47.86,7.97]]},
+  {n:"B34",p:["Grenzach-Wyhlen","Rheinfelden"]},
+  {n:"",p:["Lörrach","Inzlingen"]},
+  {n:"",p:["Binzen","Kandern","Schliengen"]},
+  {n:"",p:["Weil am Rhein","Binzen","Lörrach"]},
+  {n:"",p:["Bad Bellingen","Schliengen"]}
+];
+/* Zusätzliche Verbindungen zwischen Orten (vereinfacht, für den Strecken-Check) */
+const EDGES_EXTRA=[["Rümmingen","Lörrach"],["Rümmingen","Binzen"],["Binzen","Eimeldingen"],["Eimeldingen","Weil am Rhein"],["Binzen","Fischingen"],
+  ["Fischingen","Efringen-Kirchen"],["Rümmingen","Wittlingen"],["Wittlingen","Schallbach"],["Schallbach","Kandern"],["Kandern","Malsburg-Marzell"],
+  ["Efringen-Kirchen","Bad Bellingen"],["Schopfheim","Wieslet"],["Wieslet","Tegernau"],["Wieslet","Sallneck"],["Tegernau","Wies"],["Tegernau","Raich"],
+  ["Raich","Hausen"],["Tegernau","Elbenschwand"],["Tegernau","Bürchau"],["Bürchau","Neuenweg"],["Schopfheim","Hasel"],["Zell im Wiesental","Häg-Ehrsberg"],
+  ["Zell im Wiesental","Fröhnd"],["Fröhnd","Schönau"],["Schönau","Tunau"],["Schönau","Wembach"],["Wembach","Böllen"],["Schönau","Schönenberg"],
+  ["Schönau","Aitern"],["Schönau","Utzenfeld"],["Utzenfeld","Todtnau"],["Utzenfeld","Wieden"]];
+/* Straßenschild-Positionen: [Bezugsort, dx, dy] */
+const ROADLABEL={"A5":["Efringen-Kirchen",-70,-30],"A98":["Rheinfelden",-130,44],"B317":["Zell im Wiesental",30,-100],"B34":["Grenzach-Wyhlen",60,34]};
+const RHEIN=[[47.88,7.528],[47.73,7.532],[47.66,7.545],[47.60,7.584],[47.567,7.603],[47.556,7.65],[47.546,7.70],[47.552,7.78],[47.557,7.86],[47.565,7.98]];
+const TYPES={
+  blitzer:{label:"Mobiler Blitzer",g:"B",c:"var(--t-blitz)",min:180},
+  kontrolle:{label:"Polizeikontrolle",g:"K",c:"var(--t-kontrolle)",min:60},
+  unfall:{label:"Unfall",g:"U",c:"var(--t-unfall)",min:90,tri:true},
+  stau:{label:"Stau",g:"S",c:"var(--t-stau)",min:45},
+  gefahr:{label:"Gefahrenstelle",g:"!",c:"var(--t-gefahr)",min:120,tri:true},
+  falsch:{label:"Falschfahrer",g:"!!",c:"var(--t-falsch)",min:20,tri:true}
+};
+/* Genauere Art je Meldung: eigene Bezeichnung und eigene Anzeigedauer (Minuten) */
+const ARTEN={
+  fest:{typ:"blitzer",label:"Fester Blitzer",min:43200},
+  wild:{typ:"gefahr",label:"Wild auf der Fahrbahn",min:30},
+  vieh:{typ:"gefahr",label:"Tiere auf der Fahrbahn",min:45},
+  glaette:{typ:"gefahr",label:"Glätte",min:240},
+  schnee:{typ:"gefahr",label:"Schnee auf der Fahrbahn",min:240},
+  gegenstand:{typ:"gefahr",label:"Gegenstand auf der Fahrbahn",min:90},
+  baum:{typ:"gefahr",label:"Baum oder Äste auf der Fahrbahn",min:180},
+  steinschlag:{typ:"gefahr",label:"Steinschlag",min:180},
+  oel:{typ:"gefahr",label:"Ölspur",min:180},
+  nebel:{typ:"gefahr",label:"Dichter Nebel",min:120},
+  wasser:{typ:"gefahr",label:"Wasser auf der Fahrbahn",min:360},
+  baustelle:{typ:"gefahr",label:"Baustelle",min:480},
+  ampel:{typ:"gefahr",label:"Ampelausfall",min:120},
+  panne:{typ:"gefahr",label:"Pannenfahrzeug",min:60},
+  langsam:{typ:"gefahr",label:"Langsames Fahrzeug",min:20},
+  sperrung:{typ:"gefahr",label:"Sperrung",min:240},
+  wildunfall:{typ:"unfall",label:"Wildunfall",min:90},
+  zoll:{typ:"stau",label:"Wartezeit am Zoll",min:45}
+};
+/* Tiere: Muster → Anzeige (Mehrzahl) + Art */
+const TIERE=[
+  [/\breh(e|en|bock|kitz|kitze)?\b/,"Rehe","wild"],[/hirsch/,"Hirsche","wild"],[/wildschwein|wildsau|keiler|frischling|\brotte\b/,"Wildschweine","wild"],
+  [/\bfuchs|\bfuechse/,"Fuchs","wild"],[/\bdachs/,"Dachs","wild"],[/\bhase(n)?\b/,"Hasen","wild"],[/kroete|froesche|amphib/,"Kröten","wild"],
+  [/\bkuh\b|kuehe|\brind(er)?\b|\bkalb\b|kaelber|\bvieh\b|\bochse/,"Kühe","vieh"],[/pferd|pony|ponys/,"Pferde","vieh"],
+  [/\bschaf|\blamm\b|laemmer/,"Schafe","vieh"],[/ziege|\bgeiss/,"Ziegen","vieh"],[/\bhund(e)?\b/,"Hund","vieh"],[/\bkatze/,"Katze","vieh"],
+  [/\bwild\b|wildwechsel/,"Wild","wild"]];
+const TIER_NAMES=new Set(TIERE.map(t=>t[1]));
+function artLabel(typ,art,detail){
+  const A=ARTEN[art]; if(!A||A.typ!==typ) return TYPES[typ].label;
+  if((art==="wild"||art==="vieh")&&detail) return `${detail} auf der Fahrbahn`;
+  if(art==="wildunfall"&&detail&&detail!=="Wild") return `Wildunfall (${detail})`;
+  return A.label;
+}
+const lbl=r=>artLabel(r.typ,r.art,r.detail);
+const durMin=r=>(ARTEN[r.art]&&ARTEN[r.art].typ===r.typ?ARTEN[r.art].min:TYPES[r.typ].min);
+const MIN=60000, DAY=86400000, HIST=30*DAY, VOTE_KEEP=31*DAY, VOTE_WINDOW=14*DAY;
+
+/* ================= Strecken & Sonne ================= */
+function kmBetween(a,b){const [la1,lo1]=TOWNS[a],[la2,lo2]=TOWNS[b];return Math.hypot((la1-la2)*111,(lo1-lo2)*111*Math.cos(47.7*Math.PI/180));}
+const GRAPH=(()=>{const g={};const add=(a,b)=>{if(!TOWNS[a]||!TOWNS[b]||a===b)return;const d=kmBetween(a,b);(g[a]=g[a]||[]).push([b,d]);(g[b]=g[b]||[]).push([a,d]);};
+  for(const r of ROADS){const n=r.p.filter(x=>typeof x==="string");for(let i=1;i<n.length;i++)add(n[i-1],n[i]);}
+  for(const [a,b] of EDGES_EXTRA) add(a,b); return g;})();
+function shortest(a,b){
+  if(!TOWNS[a]||!TOWNS[b]) return null; if(a===b) return [a];
+  const dist={[a]:0},prev={},done=new Set(),q=[a];
+  while(q.length){ q.sort((x,y)=>dist[x]-dist[y]); const u=q.shift(); if(done.has(u)) continue; done.add(u); if(u===b) break;
+    for(const [v,w] of GRAPH[u]||[]){const nd=dist[u]+w; if(dist[v]===undefined||nd<dist[v]){dist[v]=nd;prev[v]=u;q.push(v);}} }
+  if(dist[b]===undefined) return null;
+  const path=[b]; while(path[0]!==a) path.unshift(prev[path[0]]);
+  return {path,km:dist[b]};
+}
+/* Sonnenauf- und -untergang (NOAA-Näherung, auf ca. 2 Minuten genau) */
+function sunTimes(now,lat=47.68,lon=7.83){
+  const d=new Date(now), y=d.getUTCFullYear(), m=d.getUTCMonth(), day=d.getUTCDate(), rad=Math.PI/180;
+  const doy=Math.floor((Date.UTC(y,m,day)-Date.UTC(y,0,0))/864e5), g=2*Math.PI/365*(doy-0.5);
+  const eqt=229.18*(0.000075+0.001868*Math.cos(g)-0.032077*Math.sin(g)-0.014615*Math.cos(2*g)-0.040849*Math.sin(2*g));
+  const decl=0.006918-0.399912*Math.cos(g)+0.070257*Math.sin(g)-0.006758*Math.cos(2*g)+0.000907*Math.sin(2*g)-0.002697*Math.cos(3*g)+0.00148*Math.sin(3*g);
+  const ha=Math.acos(Math.cos(90.833*rad)/(Math.cos(lat*rad)*Math.cos(decl))-Math.tan(lat*rad)*Math.tan(decl))/rad;
+  const base=Date.UTC(y,m,day);
+  return {rise:base+(720-4*(lon+ha)-eqt)*6e4, set:base+(720-4*(lon-ha)-eqt)*6e4};
+}
+const hm=t=>{const d=new Date(t);return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");};
+function duskInfo(now){
+  const {rise,set}=sunTimes(now), H=3600e3;
+  if(now>=rise-H&&now<=rise+H) return {kind:"Morgendämmerung",info:`Sonnenaufgang ${hm(rise)}`};
+  if(now>=set-H&&now<=set+1.5*H) return {kind:"Abenddämmerung",info:`Sonnenuntergang ${hm(set)}`};
+  return null;
+}
+
+/* ================= Helfer ================= */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const proj=(lat,lon)=>[(lon-7.48)*1885,(47.87-lat)*2800];
+const pt=x=>Array.isArray(x)?x:TOWNS[x];
+const normStr=s=>String(s||"").toUpperCase().replace(/[\s\-.]/g,"");
+const normRi=s=>String(s||"").toLowerCase().trim();
+const clip=(s,n)=>String(s||"").trim().slice(0,n);
+function hash(s){let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))|0;return h;}
+function endOfDay(){const e=new Date();e.setHours(23,59,59,0);return e.getTime();}
+const durTxt=m=>m>=1440?`${Math.round(m/1440)} Tage`:m>=60?`${m/60} Std`:`${m} Min`;
+function leftTxt(ms){const m=Math.max(0,Math.round(ms/MIN));return m<60?`noch ${m} Min`:m<2880?`noch ${Math.floor(m/60)} Std ${m%60} Min`:`noch ${Math.round(m/1440)} Tage`;}
+function agoTxt(t,now){const m=Math.max(0,Math.round((now-t)/MIN));return m<1?"gerade eben":m<60?`vor ${m} Min`:`vor ${Math.floor(m/60)} Std ${m%60} Min`;}
+let toastTimer=0;
+function toast(msg){const t=$("toast");t.textContent=msg;t.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{t.hidden=true;},3800);}
+
+/* ================= Schimpfwort-Filter ================= */
+/* Wortanfänge, die blockiert werden. Bewusst NICHT drin, weil im Verkehr normal: "behindert", "Lappen", "Bullen", "Sau(wetter)". */
+const BAD=["arschl","arschgeige","arschkriecher","wichser","wixer","wixxer","fotze","hurensohn","huso","hure","schlampe","missgeburt","spast","spasti","spacko",
+  "vollidiot","idiot","trottel","penner","bastard","scheiss","scheis","fick","verfickt","gefickt","kacke","mistkerl","drecksau","drecksack","dreckspack","hackfresse",
+  "schwuchtel","kanake","neger","nigger","nigga","pisser","fuck","motherfuck","shit","bitch","asshole","cunt","dumm","depp","bullenschwein","schweinebulle"];
+const BAD_EXACT=new Set(["arsch","sau","nazi"]);
+function normWord(w){
+  return w.toLowerCase().replace(/ß/g,"ss").replace(/[0@4]/g,c=>({"0":"o","@":"a","4":"a"}[c])).replace(/1/g,"i").replace(/3/g,"e").replace(/[5$]/g,"s").replace(/7/g,"t")
+    .replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/[^a-z]/g,"").replace(/(.)\1{2,}/g,"$1$1");
+}
+function badWord(w){ const n=normWord(w); if(!n) return false; if(BAD_EXACT.has(n)) return true;
+  const n1=n.replace(/(.)\1+/g,"$1"); return BAD.some(b=>n.startsWith(b)||n1.startsWith(b.replace(/(.)\1+/g,"$1"))); }
+const tokens=s=>String(s||"").split(/[\s,.;:!?()"'„“\/\-]+/);
+const hasBad=s=>tokens(s).some(badWord);
+const maskBad=s=>String(s||"").replace(/[^\s,.;:!?()"'„“\/\-]+/g,w=>badWord(w)?w[0]+"***":w);
+
+/* Umgangssprache für Polizei sachlich ersetzen */
+const POLICE_RE=/(^|[^A-Za-zÄÖÜäöüß])(bullen|bulle|bullerei|cops|cop|polente|schmiere|bullenwagen|bullenauto)(?=$|[^A-Za-zÄÖÜäöüß])/gi;
+const neutral=s=>String(s||"").replace(POLICE_RE,(m,pre,w)=>pre+(/wagen|auto/i.test(w)?"Polizeiwagen":"Polizei"));
+
+/* ================= Länder-Sperre ================= */
+/* Prototyp: Erkennung über Zeitzone und Sprache des Geräts. Die echte App sperrt die Schweiz zusätzlich
+   in den App-Stores (Verfügbarkeit nach Land) und blendet Blitzer per GPS aus, sobald man über der Grenze ist. */
+const REGION=(()=>{let tz="",langs=[];try{tz=Intl.DateTimeFormat().resolvedOptions().timeZone||"";}catch(e){}
+  try{langs=(navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||""]).map(l=>String(l));}catch(e){}
+  const ch=tz==="Europe/Zurich"||langs.some(l=>/-(CH|LI)$/i.test(l))||tz==="Europe/Vaduz";
+  const fr=!ch&&(tz==="Europe/Paris"||/^fr(-FR)?$/i.test(langs[0]||""));
+  return ch?"CH":fr?"FR":"DE";})();
+const SPEED_TYPES=new Set(["blitzer","kontrolle"]);
+const allowedType=t=>REGION==="DE"||!SPEED_TYPES.has(t);
+
+/* ================= Zustand ================= */
+let reports=[];          // alle Meldungen der letzten 30 Tage (bereinigt)
+let voteDocs=new Map();  // uid -> {rid:{s:"ok"|"weg", t, m?}}
+let myVotes={};          // eigene Stimmen
+let db=null, sample=null, uid=null, canWrite=true, demo=false, sel=null, draft=null, sending=false;
+let voteChain=Promise.resolve();
+
+/* Daten aus der Datenbank sind fremde Eingaben: nur gültige Felder übernehmen */
+function clean(id,d){
+  if(!d||!TYPES[d.typ]||!TOWNS[d.ort]||typeof d.t!=="number") return null;
+  return {id,typ:d.typ,ort:d.ort,strasse:maskBad(clip(d.strasse,40)),richtung:maskBad(clip(d.richtung,40)),kurz:neutral(maskBad(clip(d.kurz,80))),
+          art:(ARTEN[d.art]&&ARTEN[d.art].typ===d.typ)?d.art:"",detail:TIER_NAMES.has(d.detail)?d.detail:"",
+          lat:(typeof d.lat==="number"&&d.lat>47.4&&d.lat<48.1)?d.lat:null,lon:(typeof d.lon==="number"&&d.lon>7.3&&d.lon<8.3)?d.lon:null,
+          t:d.t,bis:typeof d.bis==="number"?d.bis:0,by:typeof d.by==="string"?d.by:""};
+}
+/* Stimmen je Meldung zusammenfassen */
+function tally(){
+  const m=new Map(), now=Date.now();
+  for(const [u,v] of voteDocs) for(const [rid,x] of Object.entries(v||{})){
+    if(!x||(x.s!=="ok"&&x.s!=="weg")||typeof x.t!=="number") continue;
+    const e=m.get(rid)||{ok:new Set(),weg:new Set(),lastOk:0,n:0};
+    /* Jede Bestätigung verlängert; gezählt werden nur Stimmen der letzten 14 Tage */
+    if(x.s==="ok"){e.lastOk=Math.max(e.lastOk,x.t); if(now-x.t<VOTE_WINDOW){e.ok.add(u);if(x.m)e.n++;}} else if(now-x.t<VOTE_WINDOW) e.weg.add(u);
+    m.set(rid,e);
+  }
+  return m;
+}
+const EMPTYV={ok:new Set(),weg:new Set(),lastOk:0,n:0};
+let V=new Map();
+const vfor=id=>V.get(id)||EMPTYV;
+
+function expiry(r){const d=durMin(r)*MIN;return Math.max(r.bis||r.t+d,vfor(r.id).lastOk+d);}
+function active(r,now){const v=vfor(r.id), need=r.art==="fest"?3:2;return now<expiry(r)&&!(v.weg.size>=need&&v.weg.size>v.ok.size);}
+
+/* ================= Lernen: häufige Stellen & Duplikate ================= */
+function hotspots(now){
+  const m=new Map();
+  for(const r of reports){ if(now-r.t>HIST) continue;
+    const k=`${r.typ}|${r.art||""}|${r.ort}|${normStr(r.strasse)}`;
+    const h=m.get(k)||{typ:r.typ,art:r.art||"",ort:r.ort,strasse:r.strasse,days:new Set()};
+    h.days.add(new Date(r.t).toDateString()); m.set(k,h); }
+  return [...m.values()].map(h=>({typ:h.typ,art:h.art,ort:h.ort,strasse:h.strasse,tage:h.days.size})).filter(h=>h.tage>=2).sort((a,b)=>b.tage-a.tage);
+}
+function hotFor(r,hs){return hs.find(h=>h.typ===r.typ&&(h.art||"")===(r.art||"")&&h.ort===r.ort&&normStr(h.strasse)===normStr(r.strasse));}
+function streetGuess(typ,ort,hs){const c=hs.filter(h=>h.typ===typ&&h.ort===ort&&h.strasse);return c.length?c[0].strasse:"";}
+/* Ohne GPS nur bei eindeutiger Übereinstimmung zusammenführen: gleiche Art, gleicher Ort, gleiche Straße, keine abweichende Richtung */
+function metersBetween(la1,lo1,la2,lo2){const r=Math.PI/180,a=Math.sin((la2-la1)*r/2)**2+Math.cos(la1*r)*Math.cos(la2*r)*Math.sin((lo2-lo1)*r/2)**2;return 12742000*Math.asin(Math.sqrt(a));}
+function findDup(doc,now){
+  const nah=r=>(doc.lat!=null&&r.lat!=null)?metersBetween(doc.lat,doc.lon,r.lat,r.lon)<(doc.art==="fest"?150:400):(r.ort===doc.ort&&normStr(r.strasse)===normStr(doc.strasse));
+  return reports.find(r=>active(r,now)&&r.typ===doc.typ&&(r.art||"")===(doc.art||"")&&(!r.detail||!doc.detail||r.detail===doc.detail)
+    &&nah(r)
+    &&(!normRi(r.richtung)||!normRi(doc.richtung)||normRi(r.richtung)===normRi(doc.richtung)));
+}
+
+/* ================= Karte ================= */
+function baseMap(){
+  const P=a=>a.map(p=>proj(...pt(p)).map(n=>n.toFixed(0)).join(",")).join(" ");
+  let s=`<defs>
+      <filter id="glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="6"/></filter>
+      <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="40"/></filter>
+      <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse"><path d="M60 0H0V60" fill="none" stroke="#ffffff" stroke-opacity=".035" stroke-width="1.5"/></pattern>
+    </defs>
+    <rect x="-2000" y="-2000" width="5000" height="5000" fill="url(#grid)"/>
+    <g filter="url(#soft)" opacity=".55">
+      <ellipse cx="760" cy="230" rx="230" ry="200" fill="#1f2b22"/>
+      <ellipse cx="520" cy="300" rx="200" ry="150" fill="#1d271f"/>
+      <ellipse cx="330" cy="430" rx="150" ry="110" fill="#1c241e"/>
+    </g>
+    <text x="400" y="170" fill="#3b4a3e" font-family="var(--f-display)" font-weight="600" font-size="30" letter-spacing="12">SCHWARZWALD</text>
+    <polyline points="${P(RHEIN)}" fill="none" stroke="#2b5d8a" stroke-width="30" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)" opacity=".5"/>
+    <polyline class="rhein" points="${P(RHEIN)}"/>`
+    +`<text class="cc" x="560" y="945">CH</text><text class="cc" x="18" y="560">F</text>`
+    +`<text class="rlabel" x="290" y="905">Rhein</text>`;
+  for(const r of ROADS) if(r.n) s+=`<polyline points="${P(r.p)}" fill="none" stroke="${r.a?"#5b86c4":"#c9a83e"}" stroke-width="${r.a?22:16}" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)" opacity=".28"/>`;
+  for(const r of ROADS) s+=`<polyline class="road${r.a?" a":""}" points="${P(r.p)}"/>`;
+  for(const r of ROADS) if(r.a) s+=`<polyline points="${P(r.p)}" fill="none" stroke="#13161b" stroke-width="2" stroke-dasharray="14 12" stroke-linecap="round"/>`;
+  for(const [n,[ref,dx,dy]] of Object.entries(ROADLABEL)){
+    const a=n.startsWith("A"); const [x,y]=proj(...TOWNS[ref]);
+    s+=`<rect x="${x+dx-6}" y="${y+dy-20}" width="${n.length*12+12}" height="26" rx="4" fill="${a?"#1d3557":"#3a3110"}"/>`
+      +`<text class="rname" x="${x+dx}" y="${y+dy}" fill="${a?"#7ea7e0":"#e2c35a"}">${n}</text>`;
+  }
+  for(const [n,[la,lo]] of Object.entries(TOWNS)){
+    if(!MAP_LABELS.has(n)){const [x,y]=proj(la,lo); s+=`<circle cx="${x}" cy="${y}" r="3.5" fill="var(--muted)" opacity=".55"><title>${esc(n)}</title></circle>`; continue;}
+    const [x,y]=proj(la,lo); const big=BIG.has(n); const [dx,dy,an]=LABEL[n]||[14,-10,"start"];
+    s+=`<circle class="town" cx="${x}" cy="${y}" r="${big?9:6}"/>`
+      +`<text class="tlabel${big?" big":""}" x="${x+dx}" y="${y+dy}" text-anchor="${an}">${esc(n)}</text>`;
+  }
+  return s;
+}
+const BASE=baseMap(); const POS={};
+function renderMap(list,hs){
+  let s=BASE;
+  if(curR&&curR.path.length>1){ const pts=curR.path.map(n=>proj(...TOWNS[n]).map(v=>v.toFixed(0)).join(",")).join(" ");
+    s+=`<polyline points="${pts}" fill="none" stroke="var(--signal)" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" opacity=".18"/>`
+      +`<polyline points="${pts}" fill="none" stroke="var(--signal)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1 12" opacity=".95"/>`;
+    for(const n of [curR.path[0],curR.path[curR.path.length-1]]){const [x,y]=proj(...TOWNS[n]); s+=`<circle cx="${x}" cy="${y}" r="11" fill="var(--asphalt)" stroke="var(--signal)" stroke-width="5"/>`;} }
+  for(const h of hs.filter(h=>allowedType(h.typ)).slice(0,25)){ const T=TYPES[h.typ]; const [x,y]=proj(...TOWNS[h.ort]);
+    s+=`<circle cx="${x}" cy="${y}" r="${Math.min(30+h.tage*4,60)}" fill="none" stroke="${T.c}" stroke-width="3" stroke-dasharray="6 7" opacity=".55"><title>${esc(T.label)} ${esc(h.ort)}: an ${h.tage} Tagen gemeldet</title></circle>`; }
+  const newest=list.length?list[0].id:null;
+  for(const r of list){
+    const T=TYPES[r.typ]; const h=hash(r.id);
+    let [x,y]=proj(...TOWNS[r.ort]); x+=((h&31)-16)*1.4; y+=(((h>>5)&31)-16)*1.4; POS[r.id]=[x,y];
+    const shape=T.tri?`<polygon points="${x},${y-24} ${x+24},${y+18} ${x-24},${y+18}" fill="${T.c}" stroke="#111" stroke-width="3"/>`
+                     :r.art==="fest"?`<rect x="${x-20}" y="${y-20}" width="40" height="40" rx="7" fill="${T.c}" stroke="#111" stroke-width="3"/>`
+                     :`<circle cx="${x}" cy="${y}" r="21" fill="${T.c}" stroke="#111" stroke-width="3"/>`;
+    s+=`<g class="mk${sel===r.id?" sel":""}" data-id="${esc(r.id)}" tabindex="0" role="button" aria-label="${esc(lbl(r)+", "+r.ort)}">`
+      +(r.id===newest?`<circle class="ping" cx="${x}" cy="${y}" r="22" fill="${T.c}"/>`:"")
+      +`<circle class="halo" cx="${x}" cy="${y}" r="32"/>${shape}`
+      +`<text x="${x}" y="${y+(T.tri?12:9)}" text-anchor="middle">${r.art==="fest"?"F":T.g}</text></g>`;
+  }
+  $("map").innerHTML=s;
+}
+/* ---- Zoom & Verschieben ---- */
+const FULL={x:0,y:0,w:950,h:960}; let vb={...FULL}, moved=false;
+function setVB(n){
+  const w=Math.min(FULL.w,Math.max(160,n.w)), h=w*FULL.h/FULL.w;
+  const x=Math.min(FULL.w-w*0.3,Math.max(-w*0.7,n.x)), y=Math.min(FULL.h-h*0.3,Math.max(-h*0.7,n.y));
+  vb={x,y,w,h}; $("map").setAttribute("viewBox",`${x.toFixed(1)} ${y.toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)}`);
+}
+function zoom(f,cx,cy){ if(cx==null){cx=vb.x+vb.w/2;cy=vb.y+vb.h/2;}
+  const w=vb.w/f; setVB({x:cx-(cx-vb.x)/f,y:cy-(cy-vb.y)/f,w,h:w*FULL.h/FULL.w}); }
+function centerOn(x,y,w){ w=w||vb.w; const h=w*FULL.h/FULL.w; setVB({x:x-w/2,y:y-h/2,w,h}); }
+function toSvg(clientX,clientY){const r=$("map").getBoundingClientRect();return [vb.x+(clientX-r.left)/r.width*vb.w, vb.y+(clientY-r.top)/r.height*vb.h];}
+$("z-in").onclick=()=>zoom(1.5); $("z-out").onclick=()=>zoom(1/1.5); $("z-reset").onclick=()=>setVB(FULL);
+$("z-3d").onclick=()=>{const on=$("stage").classList.toggle("tilt");$("z-3d").setAttribute("aria-pressed",String(on));};
+const ptrs=new Map(); let last=null, pinch=0;
+const stage=$("stage");
+stage.addEventListener("pointerdown",e=>{ if(e.target.closest(".ctrls")) return; ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY}); moved=false; last={x:e.clientX,y:e.clientY};
+  if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch=Math.hypot(a.x-b.x,a.y-b.y);} });
+stage.addEventListener("pointermove",e=>{ if(!ptrs.has(e.pointerId)) return; ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  const r=$("map").getBoundingClientRect();
+  if(ptrs.size===2){const [a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);
+    if(pinch&&Math.abs(d-pinch)>2){const [cx,cy]=toSvg((a.x+b.x)/2,(a.y+b.y)/2);zoom(d/pinch,cx,cy);pinch=d;moved=true;} return;}
+  const dx=e.clientX-last.x, dy=e.clientY-last.y;
+  if(!moved&&Math.hypot(dx,dy)<6) return;
+  if(!moved){moved=true;stage.classList.add("drag");try{stage.setPointerCapture(e.pointerId);}catch(_){}}
+  setVB({x:vb.x-dx/r.width*vb.w,y:vb.y-dy/r.height*vb.h,w:vb.w,h:vb.h}); last={x:e.clientX,y:e.clientY}; });
+const endPtr=e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=0;if(!ptrs.size)stage.classList.remove("drag");if(ptrs.size===1){const p=[...ptrs.values()][0];last={...p};}};
+stage.addEventListener("pointerup",endPtr); stage.addEventListener("pointercancel",endPtr);
+stage.addEventListener("wheel",e=>{e.preventDefault();const [cx,cy]=toSvg(e.clientX,e.clientY);zoom(e.deltaY<0?1.15:1/1.15,cx,cy);},{passive:false});
+
+$("map").addEventListener("click",e=>{if(moved){moved=false;return;}const g=e.target.closest(".mk");if(g)select(g.dataset.id,true);});
+$("map").addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){const g=e.target.closest(".mk");if(g){e.preventDefault();select(g.dataset.id,true);}}});
+function select(id,scroll){
+  sel=sel===id?null:id; render();
+  if(scroll&&sel){const c=document.querySelector(`.card[data-id="${CSS.escape(id)}"]`);c&&c.scrollIntoView({behavior:"smooth",block:"center"});}
+}
+const FILTERS=[{k:"alle",label:"Alle",types:null},{k:"gef",label:"Gefahren",types:["falsch","gefahr"],c:"var(--t-gefahr)"},
+  {k:"ver",label:"Stau & Unfälle",types:["stau","unfall"],c:"var(--t-unfall)"},{k:"kon",label:"Blitzer & Kontrollen",types:["blitzer","kontrolle"],c:"var(--t-blitz)"}]
+  .filter(f=>!f.types||f.types.some(allowedType));
+let filterKey="alle";
+const passFilter=r=>{ if(filterKey==="str") return !!curR&&curR.set.has(r.ort);
+  const f=FILTERS.find(x=>x.k===filterKey);return !f||!f.types||f.types.includes(r.typ);};
+function renderFilters(list){
+  const routeChip=curR?(()=>{const n=list.filter(r=>curR.set.has(r.ort)).length;
+    return `<button class="fchip" type="button" data-f="str" aria-pressed="${filterKey==="str"}"><i style="background:var(--signal)"></i>Meine Strecke <b>${n}</b></button>`;})():"";
+  $("filters").innerHTML=routeChip+FILTERS.map(f=>{const n=f.types?list.filter(r=>f.types.includes(r.typ)).length:list.length;
+  return `<button class="fchip" type="button" data-f="${f.k}" aria-pressed="${filterKey===f.k}">${f.c?`<i style="background:${f.c}"></i>`:""}${f.label} <b>${n}</b></button>`;}).join(""); }
+$("filters").addEventListener("click",e=>{const b=e.target.closest("[data-f]");if(!b)return;filterKey=b.dataset.f;render();});
+void 0
+  ;
+
+/* ================= Liste ================= */
+let confirmDel=null;
+function badge(T,r){const f=r&&r.art==="fest";return `<div class="badge${T.tri?" tri":""}" style="background:${T.c}${f?";border-radius:9px":""}" aria-hidden="true">${f?"F":T.g}</div>`;}
+function card(r,now,hs,ex){
+  const T=TYPES[r.typ]; const v=ex?{ok:new Set(["a","b","c"]),weg:new Set(),n:1}:vfor(r.id);
+  const hot=ex?{tage:6}:hotFor(r,hs);
+  const mineOk=!ex&&uid&&v.ok.has(uid), mineWeg=!ex&&uid&&v.weg.has(uid), mine=!ex&&uid&&r.by===uid;
+  const where=[r.strasse,r.ort].filter(Boolean).join(" · ")+(r.richtung?` → ${r.richtung}`:"");
+  const dis=(!canWrite||ex)?"disabled":"";
+  const reporters=1+v.n;
+  const fest=r.art==="fest";
+  return `<article class="card${sel===r.id?" sel":""}${ex?" example":""}" data-id="${esc(r.id)}" ${ex?"":'tabindex="0"'}>${badge(T,r)}
+    <div class="body">${ex?'<span class="tag">Beispiel</span>':""}
+      <div class="t1">${esc(lbl(r))} · ${esc(where)}</div>
+      ${r.kurz?`<div class="t2">${esc(r.kurz)}</div>`:""}
+      ${reporters>1?`<div class="t2">${reporters} Personen haben das unabhängig gemeldet</div>`:""}
+      ${hot?`<div class="t2 hot">Bekannte Stelle · in den letzten 30 Tagen an ${hot.tage} Tagen gemeldet</div>`:""}
+      <div class="meta">${fest?`<span>Fest installiert</span><span class="left">${v.lastOk?"bestätigt "+agoTxt(v.lastOk,now):"gemeldet "+agoTxt(r.t,now)}</span>`:`<span>${agoTxt(r.t,now)}</span><span class="left">${leftTxt(expiry(r)-now)}${r.bis?" · bis Tagesende":""}</span>`}<span>✓ ${v.ok.size} · ✕ ${v.weg.size}</span></div>
+      <div class="acts">
+        <button class="chipbtn${mineOk?" on":""}" data-act="ok" data-id="${esc(r.id)}" type="button" aria-pressed="${!!mineOk}" ${dis}>${fest?"✓ Steht noch":"✓ Noch da"}</button>
+        <button class="chipbtn${mineWeg?" on neg":""}" data-act="weg" data-id="${esc(r.id)}" type="button" aria-pressed="${!!mineWeg}" ${dis}>✕ Weg</button>
+      </div>
+      ${ex?"":`<div class="sublinks"><button data-act="note" data-id="${esc(r.id)}" type="button">${isPremium()?"Notiz":"Notiz (Premium)"}</button>
+        ${mine&&canWrite?`<button class="${confirmDel===r.id?"warn":""}" data-act="del" data-id="${esc(r.id)}" type="button">${confirmDel===r.id?"Wirklich löschen?":"Löschen"}</button>`:""}</div>`}
+      ${!ex&&isPremium()&&noteEdit!==r.id&&notes[spotKey(r)]?`<div class="notetxt">${esc(notes[spotKey(r)])}</div>`:""}
+      ${!ex&&noteEdit===r.id?`<div class="notebox"><textarea id="note-in" maxlength="300" placeholder="z. B. steht immer hinter der Brücke, rechte Seite">${esc(notes[spotKey(r)]||"")}</textarea>
+        <div class="acts"><button class="chipbtn on" data-act="notesave" data-id="${esc(r.id)}" type="button">Speichern</button><button class="chipbtn" data-act="notecancel" data-id="${esc(r.id)}" type="button">Abbrechen</button></div>
+        <div class="t2">Nur für dich sichtbar · gilt für diese Stelle, auch bei künftigen Meldungen</div></div>`:""}
+      </div></article>`;
+}
+function render(){
+  const now=Date.now(); V=tally();
+  const all=reports.filter(r=>active(r,now)&&allowedType(r.typ)).sort((a,b)=>b.t-a.t);
+  curR=curRoute();
+  if(filterKey==="str"&&!curR) filterKey="alle";
+  renderFilters(all);
+  const list=all.filter(passFilter);
+  if(sel&&!list.some(r=>r.id===sel)) sel=null;
+  const hs=hotspots(now);
+  renderRoute(all,hs,now);
+  renderMap(list,hs);
+  if(!$("drive").hidden) renderDrive(list,now);
+  $("count").textContent=list.length?`${list.length} aktiv`:"";
+  updatePtsChip();
+  const AD=`<aside class="ad" aria-label="Anzeige"><span class="lbl">Anzeige</span><div class="txt">Partner der Woche: Hier könnte deine Werkstatt stehen.<small>Lokale Werbung hält die App kostenlos. <button class="linkbtn" data-act="prem" data-id="" type="button">Werbefrei mit Premium</button></small></div></aside>`;
+  if(list.length){
+    const cards=list.map(r=>card(r,now,hs,false));
+    if(!isPremium()) cards.splice(Math.min(1,cards.length),0,AD);
+    $("list").innerHTML=cards.join(""); return;}
+  const ex={id:"beispiel",typ:"blitzer",ort:"Steinen",strasse:"B317",richtung:"Schopfheim",kurz:"Laser am Ortsausgang, rechte Seite",t:now-7*MIN,bis:0,by:""};
+  $("list").innerHTML=`<div class="empty"><p>Gerade keine aktiven Meldungen. Neue Meldungen erscheinen hier und auf der Karte, sobald jemand etwas meldet. Sie laufen automatisch ab und verschwinden früher, wenn andere sie als „nicht mehr da“ markieren.</p>${card(ex,now,[],true)}</div>`;
+}
+$("list").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-act]");
+  if(b){e.stopPropagation();act(b.dataset.act,b.dataset.id);return;}
+  const c=e.target.closest(".card");
+  if(c&&!c.classList.contains("example")&&!e.target.closest(".notebox")) focusReport(c.dataset.id);
+});
+function focusReport(id){
+  const wasSel=sel===id; select(id,false);
+  if(!wasSel&&POS[id]){ centerOn(POS[id][0],POS[id][1],Math.min(vb.w,420)); $("stage").scrollIntoView({behavior:"smooth",block:"nearest"}); }
+}
+$("list").addEventListener("keydown",e=>{
+  if((e.key==="Enter"||e.key===" ")&&e.target.classList.contains("card")){e.preventDefault();focusReport(e.target.dataset.id);}
+});
+
+/* ================= Stimmen ================= */
+function saveMyVotes(){
+  const now=Date.now();
+  for(const [k,x] of Object.entries(myVotes)) if(!x||now-x.t>VOTE_KEEP) delete myVotes[k];
+  const snapshot=JSON.parse(JSON.stringify(myVotes));
+  voteDocs.set(uid,snapshot); render(); scheduleSync();
+  if(demo) return Promise.resolve();
+  /* Ein Schreibvorgang nach dem anderen auf das eigene Dokument */
+  voteChain=voteChain.then(()=>db.doc("votes/"+uid).set({u:now,v:snapshot})).catch(e=>{
+    if(e&&e.code==="invalid_argument"){canWrite=false;applyWrite();render();toast("Du hast hier nur Leserechte.");}
+    else toast("Stimme konnte nicht gespeichert werden.");
+  });
+  return voteChain;
+}
+async function act(kind,id){
+  if(kind==="prem"){openPts();return;}
+  const r=reports.find(x=>x.id===id); if(!r||!uid) return;
+  if(kind==="note"){ if(!isPremium()){openPts("Notizen gibt es mit Premium.");return;} noteEdit=noteEdit===id?null:id; render(); setTimeout(()=>{const t=$("note-in");t&&t.focus();},30); return; }
+  if(kind==="notecancel"){noteEdit=null;render();return;}
+  if(kind==="notesave"){ const t=$("note-in"); const k=spotKey(r); const val=clip(t?t.value:"",300);
+    if(hasBad(val)){toast("Bitte ohne Schimpfwörter.");return;}
+    if(val) notes[k]=val; else delete notes[k]; noteEdit=null; render(); saveNotes(); return; }
+  if(!canWrite) return;
+  if(kind==="del"){
+    if(confirmDel!==id){confirmDel=id;render();setTimeout(()=>{if(confirmDel===id){confirmDel=null;render();}},4000);return;}
+    confirmDel=null;
+    if(demo){reports=reports.filter(x=>x.id!==id);render();return;}
+    try{await db.doc("meldungen/"+id).delete();toast("Meldung gelöscht.");}catch(e){toast("Löschen fehlgeschlagen.");}
+    return;
+  }
+  const cur=myVotes[id]&&myVotes[id].s;
+  if(cur===kind) delete myVotes[id]; else myVotes[id]={s:kind,t:Date.now()};
+  saveMyVotes();
+}
+
+/* ================= Melden ================= */
+const sheet=$("sheet");
+$("f-typ").innerHTML=Object.entries(TYPES).filter(([k])=>allowedType(k)).map(([k,t])=>`<option value="${k}">${t.label}</option>`).join("");
+const TOWN_ORDER=[...BIG,...Object.keys(TOWNS).filter(n=>!BIG.has(n)).sort((a,b)=>a.localeCompare(b,"de"))];
+
+$("f-ort").innerHTML=TOWN_ORDER.map(n=>`<option value="${esc(n)}">${esc(GEMEINDE[n]?n+" ("+GEMEINDE[n]+")":n)}</option>`).join("");
+const TOP_ORTE=["Lörrach","Weil am Rhein","Rheinfelden","Schopfheim","Steinen","Zell im Wiesental","Schönau","Todtnau","Kandern","Tegernau"];
+$("ortchips").innerHTML=TOP_ORTE.map(n=>`<button class="chipbtn" type="button" data-ort="${esc(n)}">${esc(n)}</button>`).join("");
+const ortLabel=n=>GEMEINDE[n]?`${n} (${GEMEINDE[n]})`:n;
+$("ortsel").innerHTML=`<option value="">Anderer Ort …</option>`+Object.keys(TOWNS).sort((a,b)=>a.localeCompare(b,"de")).map(n=>`<option value="${esc(n)}">${esc(ortLabel(n))}</option>`).join("");
+$("ortsel").addEventListener("change",()=>{const v=$("ortsel").value; if(!v||!draft) return; draft.ort=v; if(draft.richtung===draft.ort) draft.richtung="";
+  syncFields(); fillConfirm(); $("askort").hidden=true; $("send").hidden=false; $("ortsel").value=""; submit();});
+$("quick").innerHTML=Object.entries(TYPES).filter(([k])=>allowedType(k)).flatMap(([k,t])=>k==="blitzer"?[[k,t],["fest",{label:"Fester Blitzer",c:t.c,sq:true}]]:[[k,t]])
+  .map(([k,t])=>`<button class="chipbtn" type="button" data-q="${k}" aria-pressed="false"><b style="width:9px;height:9px;border-radius:${t.sq?"2px":"50%"};background:${t.c}"></b>${t.label}</button>`).join("");
+const hintLabel=h=>h==="fest"?"Fester Blitzer":TYPES[h].label;
+function fillArtOptions(typ,cur){ const opts=Object.entries(ARTEN).filter(([k,a])=>a.typ===typ);
+  $("f-art").innerHTML=`<option value="">Allgemein</option>`+opts.map(([k,a])=>`<option value="${k}">${esc(a.label)}</option>`).join("");
+  $("f-art").value=opts.some(([k])=>k===cur)?cur:""; $("f-art").disabled=!opts.length; }
+function updDur(){$("f-dur").options[0].textContent=`Standard (${durTxt(durMin({typ:$("f-typ").value,art:$("f-art").value}))})`;}
+let typHint=null, cdTimer=0;
+$("quick").addEventListener("click",e=>{const b=e.target.closest("[data-q]");if(!b)return;
+  typHint=typHint===b.dataset.q?null:b.dataset.q;
+  document.querySelectorAll("#quick [data-q]").forEach(x=>{const on=x.dataset.q===typHint;x.classList.toggle("pick",on);x.setAttribute("aria-pressed",String(on));});
+  $("hint1").textContent=typHint==="fest"?"Fester Blitzer: am besten direkt in der Nähe melden, dann stimmt die Position. Bleibt 30 Tage, jede Bestätigung verlängert.":"🎤 Tipp aufs Mikrofon deiner Tastatur und sprich. Art, Ort, Straße und Richtung erkennt die App selbst.";
+  $("txt").focus();});
+let lastFocus=null;
+function showStep(n){$("step1").hidden=n!==1;$("step2").hidden=n!==2;}
+function resetSheet(){stopCountdown();showStep(1);$("result").hidden=true;$("askort").hidden=true;setStatus("");draft=null;typHint=null;
+  document.querySelectorAll("#quick [data-q]").forEach(x=>{x.classList.remove("pick");x.setAttribute("aria-pressed","false");});}
+function openSheet(){lastFocus=document.activeElement;resetSheet();sheet.hidden=false;setTimeout(()=>$("txt").focus(),50);}
+function closeSheet(){stopCountdown();sheet.hidden=true;lastFocus&&lastFocus.focus&&lastFocus.focus();}
+$("open").onclick=openSheet; $("close").onclick=closeSheet;
+sheet.addEventListener("click",e=>{if(e.target===sheet)closeSheet();});
+document.addEventListener("keydown",e=>{if(e.key!=="Escape")return; if(!$("adv").hidden){closeAd();return;} if(!$("fsheet").hidden){$("fsheet").hidden=true;return;} if(!$("dsheet").hidden){$("dsheet").hidden=true;return;} if(!$("msheet").hidden){$("msheet").hidden=true;return;} if(!$("psheet").hidden){$("psheet").hidden=true;return;} if(!sheet.hidden)closeSheet(); else if(!$("drive").hidden)exitDrive();});
+$("txt").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("go").click();}});
+function setStatus(m,err){const s=$("status");s.textContent=m;s.className="status"+(err?" err":"");}
+
+/* ---- Lokale Erkennung (funktioniert auch ohne KI) ---- */
+const ROADS_RE=/(?:^|[^a-z0-9])(a|b|l|k)\s?-?\s?(\d{1,4})(?!\d)/;
+function norm(t){return t.toLowerCase().replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/ß/g,"ss");}
+function townFrom(word){ if(!word) return null; const w=norm(word).replace(/[^a-z]/g,"");
+  for(const n of Object.keys(TOWNS)) if(norm(n).replace(/[^a-z]/g,"").startsWith(w)&&w.length>=4) return n;
+  return ALIAS[w]||null; }
+function parseLocal(text){
+  const s=norm(text); let typ="gefahr", art="", detail="";
+  const tier=TIERE.find(t=>t[0].test(s));
+  if(/falschfahrer|geisterfahrer|(gegen|entgegen) die fahrtrichtung|falsche(n)? richtung|auf der falschen (seite|spur)/.test(s)) typ="falsch";
+  else if(/blitz|radar|laser|messung|starenkasten|tempomess|enforcement|messwagen|messanhaenger|blitzeranhaenger|trailer|fotofalle|geblitzt|saeule|rotlicht/.test(s)){ typ="blitzer";
+    /* fest installiert: Starenkasten, Säule, Ampel-/Rotlichtblitzer, "fester"/"stationärer" Blitzer */
+    if(/starenkasten|saeule|ampelblitzer|rotlicht|\bfeste[rn]?\b|\bfix(e[rn]?)?\b|stationaer|dauerhaft|blitzkasten|blitzerkasten|immer da|steht immer/.test(s)&&!/mobil|anhaenger|trailer|messwagen|laser|heute/.test(s)) art="fest"; }
+  else if(tier&&/unfall|angefahren|erwischt|ueberfahren|zusammengestossen|gerammt|tot(es|er)?\b/.test(s)){typ="unfall";art="wildunfall";detail=tier[1];}
+  else if(/unfall|crash|zusammenstoss|karambol|aufgefahren|gekracht|auffahr|ueberschlagen|abgerutscht|im graben/.test(s)) typ="unfall";
+  else if(/kontroll|polizei|streife|zivil|bullen|grenzkontroll|zollkontroll|schwerpunkt/.test(s)) typ="kontrolle";
+  else if(/stau|stockend|zaehfliess|zaeh|staut|nichts geht|steht alles|rueckstau|wartezeit|warten am zoll/.test(s)){typ="stau"; if(/zoll|grenze/.test(s)) art="zoll";}
+  else if(tier){art=tier[2];detail=tier[1];}
+  else {
+    const G=[["glaette",/glatt|glaette|glatteis|eisglaette|blitzeis|ueberfrier|\breif\b|rutschig/],["schnee",/schnee|verschneit|matsch|schneeglaette/],
+      ["baum",/\bbaum|\baeste\b|\bast\b|umgestuerzt|umgefallen|sturmschaden/],["steinschlag",/steinschlag|felsbrocken|steine auf|geroell|hangrutsch/],
+      ["oel",/\boel|oelspur|diesel|betriebsstoff/],["nebel",/nebel|keine sicht|sicht unter/],["wasser",/ueberflut|hochwasser|wasser auf|aquaplaning|ueberschwemm/],
+      ["baustelle",/baustelle|bauarbeiten|einspurig|halbseitig|fahrbahnverengung|wanderbaustelle/],["ampel",/ampel/],
+      ["panne",/panne|liegengeblieben|pannenfahrzeug|standstreifen|abgeschleppt|kaputt/],
+      ["langsam",/traktor|schlepper|landwirtschaft|maehdrescher|langholz|holztransport|holzlaster|raeumfahrzeug|schneepflug|streufahrzeug|schwertransport|kolonne|radrennen/],
+      ["sperrung",/gesperrt|sperrung|vollsperrung|umleitung/],
+      ["gegenstand",/gegenstand|ladung|verloren|reifenteil|reifen auf|teile auf|paletten|kanister|auspuff|muell|matratze/]];
+    const g=G.find(x=>x[1].test(s)); if(g) art=g[0];
+  }
+  const hintTyp=typHint==="fest"?"blitzer":typHint;
+  if(hintTyp&&hintTyp!==typ){typ=hintTyp; if(!(ARTEN[art]&&ARTEN[art].typ===typ)){art="";detail="";}}
+  if(typHint==="fest"){typ="blitzer";art="fest";detail="";}
+  let ort=null, strasse="", kurz="";
+  for(const sp of SPOTS) if(sp.re.test(s)){ort=sp.ort;strasse=sp.str;kurz=sp.kurz;break;}
+  /* Richtung zuerst herauslösen, damit der Zielort nicht als Standort gilt */
+  let richtung=""; let rest=s;
+  const DIRS={stadteinwaerts:"stadteinwärts",stadtauswaerts:"stadtauswärts",ortseinwaerts:"ortseinwärts",ortsauswaerts:"ortsauswärts"};
+  const ri=s.match(/(?:fahrt)?richtung\s+([a-z][a-z\-]+(?:\s+(?:am|im)\s+[a-z]+)?)/) || s.match(/\b(stadteinwaerts|stadtauswaerts|ortseinwaerts|ortsauswaerts)\b/);
+  if(ri){ const word=ri[1]; const t=townFrom(word.split(/\s/)[0]); richtung=DIRS[word]||t||(word.charAt(0).toUpperCase()+word.slice(1)); rest=s.replace(ri[0]," "); }
+  else { const na=s.match(/\bnach\s+([a-z\-]{4,})/); if(na){const t=townFrom(na[1]); if(t){richtung=t; rest=s.replace(na[0]," ");}} }
+  if(!ort){ /* der zuerst genannte Ort zählt ("zwischen Zell und Schönau" → Zell) */
+    let best=1e9;
+    for(const n of Object.keys(TOWNS)){const m=new RegExp("(^|[^a-z])"+norm(n).replace(/[-]/g,"[- ]?")+"($|[^a-z])").exec(rest); if(m&&m.index<best){best=m.index;ort=n;}}
+    for(const [a,n] of Object.entries(ALIAS)){const m=new RegExp("(^|[^a-z])"+a+"($|[^a-z])").exec(rest); if(m&&m.index<best){best=m.index;ort=n;}} }
+  if(ort&&richtung===ort) richtung="";
+  if(!strasse){const m=rest.match(ROADS_RE)||s.match(ROADS_RE); if(m) strasse=m[1].toUpperCase()+m[2];}
+  if(!strasse&&/zollfreie/.test(s)) strasse="Zollfreie Straße";
+  if(!ort&&strasse==="B317"&&/wiesental/.test(s)) ort=null;
+  return {typ,art,detail,ort,strasse,richtung,kurz};
+}
+const HIDE_SAMPLE=["not_granted","sampling_disabled","not_declared","capability_disabled","capability_removed"];
+const ALIAS_HINT=(()=>{const m={};for(const [a,n] of Object.entries(ALIAS))(m[n]=m[n]||[]).push(a);return Object.entries(m).map(([n,l])=>`${n}: ${l.join(", ")}`).join("; ");})();
+async function recognize(text){
+  const res=parseLocal(text); let via="Wortregeln";
+  if(sample){
+    const hs=hotspots(Date.now()).slice(0,15).map(h=>`${h.typ} ${h.ort} ${h.strasse}`.trim()).join("; ")||"keine";
+    try{
+      const j=await sample.json(
+`Du wertest eine gesprochene Verkehrsmeldung aus dem Landkreis Lörrach aus. Die Leute sprechen umgangssprachlich und knapp.
+Antworte nur mit einem JSON-Objekt: {"typ": string, "art": string, "detail": string, "ort": string|null, "strasse": string, "richtung": string, "kurz": string}
+- typ: genau einer von "blitzer" (Geschwindigkeitsmessung: mobil wie "Laser", "Anhänger", "Messwagen"; fest installiert wie "Starenkasten", "Säule", "Ampelblitzer" → art "fest"), "kontrolle" (Polizei-/Zollkontrolle, auch "Zivile", "Bullen"), "unfall", "stau" (auch Wartezeit am Zoll), "gefahr" (Gegenstand, Glätte, Tiere, Ölspur, Baustelle, Ampelausfall u. ä.), "falschfahrer" → "falsch"${typHint?`\n- Der Nutzer hat vorab "${typHint}" gewählt; nimm das, außer der Text widerspricht klar.`:""}
+- art: genauer, passend zum typ, sonst "": ${Object.entries(ARTEN).map(([k,a])=>`"${k}" (${a.typ}: ${a.label})`).join(", ")}. Wild = Rehe, Hirsche, Wildschweine, Füchse usw.; vieh = Kühe, Pferde, Schafe, Ziegen, Hunde. Ein Zusammenstoß mit einem Tier ist "unfall" mit art "wildunfall".
+- detail: bei Tieren genau einer von ${[...TIER_NAMES].map(n=>`"${n}"`).join(", ")}, sonst ""
+- ort: wo es ist, als Gemeinde aus dieser Liste, sonst null: ${Object.keys(TOWNS).join(", ")}. Nicht mit dem Ziel der Fahrtrichtung verwechseln.
+- Ortsteile und Orte → Gemeinde: ${ALIAS_HINT}
+- Grenzübergänge: Weil-Otterbach (A5) → Weil am Rhein; Rheinfelden (A861) → Rheinfelden; Lörrach-Stetten → Lörrach; Grenzach → Grenzach-Wyhlen.
+- strasse: z. B. "B317" (Wiesental), "B316", "B34", "B3", "A5", "A98", "A861" oder Straßenname, sonst ""
+- richtung: Fahrtrichtung (Ort, Basel, Schweiz, Freiburg, stadteinwärts …), sonst ""
+- kurz: knappe sachliche Zusatzinfo ohne Ort/Straße/Art, ohne Beleidigungen, schreibe "Polizei" statt "Bullen"/"Cops", max. 60 Zeichen, sonst ""
+Häufig gemeldete Stellen der letzten 30 Tage (nur zum Zuordnen unklarer Angaben, nichts erfinden): ${hs}
+Meldung: """${text.slice(0,400)}"""`,{modelTier:"quick"});
+      if(j&&typeof j==="object"){
+        if(TYPES[j.typ]&&typHint!=="fest") res.typ=j.typ;
+        if(typeof j.art==="string"&&ARTEN[j.art]&&ARTEN[j.art].typ===res.typ) res.art=j.art; else if(!(ARTEN[res.art]&&ARTEN[res.art].typ===res.typ)) res.art="";
+        if(typeof j.detail==="string"&&TIER_NAMES.has(j.detail)) res.detail=j.detail;
+        if(!["wild","vieh","wildunfall"].includes(res.art)) res.detail="";
+        if(typeof j.ort==="string"&&TOWNS[j.ort]) res.ort=j.ort;
+        res.strasse=clip(j.strasse,40)||res.strasse; res.richtung=clip(j.richtung,40)||res.richtung; res.kurz=clip(j.kurz,80)||res.kurz;
+        if(typHint==="fest"){res.typ="blitzer";res.art="fest";}
+        via="KI";
+      }
+    }catch(e){ if(e&&HIDE_SAMPLE.includes(e.code)) sample=null; }
+  }
+  if(res.ort&&!res.strasse){const g=streetGuess(res.typ,res.ort,hotspots(Date.now())); if(g) res.strasse=g;}
+  return {res,via};
+}
+function fillConfirm(){
+  const T=TYPES[draft.typ]; const where=[draft.strasse,draft.ort].filter(Boolean).join(" · ")+(draft.richtung?` → ${draft.richtung}`:"");
+  $("confirm").innerHTML=`${badge(T,draft)}<div style="min-width:0"><div class="t1">${esc(lbl(draft))}</div><div class="t2">${esc(where||"Ort fehlt noch")}${draft.kurz?" · "+esc(draft.kurz):""}</div></div>`;
+}
+function syncFields(){ $("f-typ").value=draft.typ; fillArtOptions(draft.typ,draft.art); updDur(); $("f-ort").value=draft.ort||TOWN_ORDER[0]; $("f-str").value=draft.strasse; $("f-ri").value=draft.richtung; }
+function readFields(){ if(draft.typ!==$("f-typ").value) fillArtOptions($("f-typ").value,""); draft.typ=$("f-typ").value;
+  const na=$("f-art").value; if(na!==draft.art){ if(!["wild","vieh","wildunfall"].includes(na)) draft.detail=""; draft.art=na; } updDur(); draft.ort=$("f-ort").value; draft.strasse=clip($("f-str").value,40); draft.richtung=clip($("f-ri").value,40); fillConfirm(); }
+["f-typ","f-art","f-ort","f-str","f-ri","f-dur"].forEach(id=>{$(id).addEventListener("input",()=>{stopCountdown();readFields();});$(id).addEventListener("change",()=>{stopCountdown();readFields();});});
+function stopCountdown(){clearInterval(cdTimer);cdTimer=0;$("send").style.setProperty("--p","0%");$("sendtxt").textContent="Eintragen";}
+function startCountdown(){
+  stopCountdown(); const total=3500, t0=Date.now();
+  const reduce=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+  cdTimer=setInterval(()=>{const el=Date.now()-t0; const left=Math.max(0,Math.ceil((total-el)/1000));
+    if(!reduce)$("send").style.setProperty("--p",Math.min(100,el/total*100)+"%");
+    $("sendtxt").textContent=`Wird eingetragen … ${left}`;
+    if(el>=total){stopCountdown();submit();}},100);
+}
+$("go").onclick=async()=>{
+  const text=$("txt").value.trim();
+  if(text.length<3&&!typHint){setStatus("Sag kurz, was wo los ist.",true);return;}
+  if(hasBad(text)){setStatus("Bitte formuliere die Meldung ohne Schimpfwörter.",true);return;}
+  $("go").disabled=true; setStatus("Erkenne Meldung …");
+  const {res}=await recognize(text||hintLabel(typHint));
+  $("go").disabled=false; setStatus("");
+  draft={...res,kurz:neutral(res.kurz),text:text||hintLabel(typHint)};
+  syncFields(); fillConfirm(); showStep(2); $("result").hidden=true;
+  if(!draft.ort){ $("askort").hidden=false; $("send").hidden=true; }
+  else { $("askort").hidden=true; $("send").hidden=false; startCountdown(); $("send").focus(); }
+};
+$("ortchips").addEventListener("click",e=>{const b=e.target.closest("[data-ort]");if(!b||!draft)return;
+  draft.ort=b.dataset.ort; if(draft.richtung===draft.ort) draft.richtung="";
+  syncFields(); fillConfirm(); $("askort").hidden=true; $("send").hidden=false; submit();});
+$("edit").onclick=()=>{stopCountdown(); $("result").hidden=!$("result").hidden; $("askort").hidden=true; $("send").hidden=false;};
+$("back").onclick=()=>{resetSheet(); setTimeout(()=>$("txt").focus(),30);};
+$("send").onclick=()=>{stopCountdown(); submit();};
+
+function getPos(ms){return new Promise(res=>{ if(!("geolocation" in navigator)) return res(null); let done=false; const t=setTimeout(()=>{done=true;res(null);},ms);
+  try{navigator.geolocation.getCurrentPosition(p=>{if(done)return;clearTimeout(t);const la=p.coords.latitude,lo=p.coords.longitude;res(la>47.4&&la<48.1&&lo>7.3&&lo<8.3?[la,lo]:null);},()=>{if(!done){clearTimeout(t);res(null);}},{enableHighAccuracy:true,maximumAge:60000,timeout:ms});}catch(e){clearTimeout(t);res(null);} });}
+async function submit(){
+  if(!draft||sending) return;
+  if(!canWrite){setStatus("Du hast hier nur Leserechte.",true);return;}
+  if(!$("result").hidden) readFields();
+  const now=Date.now();
+  const doc={typ:draft.typ,art:(ARTEN[draft.art]&&ARTEN[draft.art].typ===draft.typ)?draft.art:"",detail:TIER_NAMES.has(draft.detail)?draft.detail:"",ort:draft.ort,strasse:clip(draft.strasse,40),richtung:clip(draft.richtung,40),
+             kurz:neutral(clip(draft.kurz,80)),text:neutral(clip(draft.text,300)),t:now,by:uid};
+  if(!allowedType(doc.typ)){setStatus("Blitzer und Kontrollen können in deinem Land nicht gemeldet werden.",true);return;}
+  if(!TYPES[doc.typ]||!TOWNS[doc.ort]){setStatus("Bitte den Ort antippen.",true);$("askort").hidden=false;return;}
+  if([doc.strasse,doc.richtung,doc.kurz,doc.text].some(hasBad)){setStatus("Bitte ohne Schimpfwörter.",true);return;}
+  if($("f-dur").value==="tag") doc.bis=endOfDay();
+  sending=true; $("send").disabled=true;
+  const gp=await getPos(doc.art==="fest"?5000:1500); if(gp){doc.lat=gp[0];doc.lon=gp[1];}
+  try{
+    const dup=findDup(doc,now);
+    if(dup){
+      const patch={};
+      if(!dup.richtung&&doc.richtung) patch.richtung=doc.richtung;
+      if(!dup.kurz&&doc.kurz) patch.kurz=doc.kurz;
+      if(doc.bis&&doc.bis>(dup.bis||0)) patch.bis=doc.bis;
+      if(Object.keys(patch).length){ if(demo) Object.assign(dup,patch); else await db.doc("meldungen/"+dup.id).update(patch); }
+      myVotes[dup.id]={s:"ok",t:now,m:dup.by!==uid?1:0};
+      await saveMyVotes();
+      sel=dup.id; toast(dup.art==="fest"?`Danke! Fester Blitzer in ${dup.ort} bestätigt, bleibt 30 Tage.`:`Danke! Mit bestehender Meldung in ${dup.ort} zusammengeführt.`);
+    } else if(demo){
+      reports.unshift({id:"d"+now,...doc,bis:doc.bis||0}); toast("Danke! Meldung ist auf der Karte (nur auf diesem Gerät).");
+    } else {
+      await db.collection("meldungen").add(doc); toast(doc.art==="fest"?"Danke! Fester Blitzer eingetragen (30 Tage, jede Bestätigung verlängert).":"Danke! Meldung ist auf der Karte.");
+      prune(now);
+    }
+    closeSheet(); $("txt").value=""; draft=null; render();
+  }catch(e){
+    const c=e&&e.code;
+    if(c==="invalid_argument"){canWrite=false;applyWrite();setStatus("Du hast hier nur Leserechte.",true);}
+    else if(c==="quota_exceeded") setStatus("Speicher voll. Alte Meldungen müssen gelöscht werden.",true);
+    else setStatus("Senden fehlgeschlagen. Bitte nochmal versuchen.",true);
+  }finally{sending=false;$("send").disabled=false;}
+}
+/* Aufräumen: Meldungen älter als 30 Tage beim Melden mitlöschen (max. 20 pro Vorgang) */
+let staleIds=[];
+async function prune(now){
+  const old=staleIds.slice(0,20); staleIds=staleIds.slice(20);
+  for(const id of old){ try{await db.doc("meldungen/"+id).delete();}catch(e){break;} }
+}
+function applyWrite(){$("open").disabled=!canWrite;$("open").textContent=canWrite?"＋ Melden":"Nur Lesen";}
+
+/* ================= Punkte & Premium ================= */
+/* Prototyp: Punkte werden im Browser berechnet und im eigenen Punkte-Dokument gespeichert.
+   In der echten App rechnet das der Server, damit niemand sich Punkte selbst gutschreiben kann. */
+let myPts={credited:{},spent:0,premiumBis:0,abo:null}, ptsLoaded=false, notes={}, noteEdit=null;
+let ptsChain=Promise.resolve(), syncTimer=0;
+const spotKey=r=>`${r.typ}|${r.ort}|${normStr(r.strasse)}`;
+const balance=()=>Object.entries(myPts.credited).reduce((a,[k,b])=>a+(k.startsWith("f:")?0:Math.max(0,Number(b)||0)),0)-(Number(myPts.spent)||0);
+const isPremium=()=>(Number(myPts.premiumBis)||0)>Date.now();
+function earned(){
+  const want={}; const perDay={};
+  for(const r of reports){ if(r.by!==uid) continue; const v=vfor(r.id);
+    const others=[...v.ok].filter(u=>u!==uid).length;
+    if(others>=1) want["m:"+r.id]=10+Math.min(10,2*(others-1));
+  }
+  const mine=Object.entries(myVotes).filter(([rid,x])=>x&&x.s==="ok").sort((a,b)=>a[1].t-b[1].t);
+  for(const [rid,x] of mine){ const r=reports.find(q=>q.id===rid); if(!r||r.by===uid) continue;
+    const d=new Date(x.t).toDateString(); perDay[d]=(perDay[d]||0)+1; if(perDay[d]<=10) want["b:"+rid]=1; }
+  return want;
+}
+function scheduleSync(){ clearTimeout(syncTimer); syncTimer=setTimeout(syncPoints,1200); }
+function syncPoints(){
+  if(!uid||(!demo&&!ptsLoaded)) return;
+  const want=earned(); let changed=false; const cr={...myPts.credited};
+  for(const [k,v] of Object.entries(want)){ const old=Number(cr[k])||0; if(k.startsWith("m:")?v>old:!(k in cr)){cr[k]=v;changed=true;} }
+  if(!changed) return;
+  const gained=balance(); myPts={...myPts,credited:cr}; const diff=balance()-gained;
+  if(diff>0) toast(`+${diff} Punkte`); savePts(); updatePtsChip();
+}
+function savePts(){
+  if(demo) return Promise.resolve();
+  const data={u:Date.now(),credited:myPts.credited,spent:myPts.spent,premiumBis:myPts.premiumBis,abo:myPts.abo||null};
+  ptsChain=ptsChain.then(()=>db.doc("punkte/"+uid).set(data)).catch(()=>toast("Punkte konnten nicht gespeichert werden."));
+  return ptsChain;
+}
+let notesChain=Promise.resolve();
+function saveNotes(){
+  if(demo){toast("Notiz gespeichert (nur auf diesem Gerät).");return;}
+  const data={u:Date.now(),n:{...notes}};
+  notesChain=notesChain.then(()=>db.doc("data/users/"+uid+"/notizen").set(data)).then(()=>toast("Notiz gespeichert.")).catch(()=>toast("Notiz konnte nicht gespeichert werden."));
+}
+function fmtDate(t){const d=new Date(t);return d.toLocaleDateString("de-DE",{day:"numeric",month:"long"});}
+function updatePtsChip(){
+  $("ptsnum").textContent=balance(); $("pts").classList.toggle("prem",isPremium());
+  $("pts").setAttribute("aria-label",`${balance()} Punkte${isPremium()?", Premium aktiv":""}`);
+  if(!$("psheet").hidden) fillPts();
+  if(!$("dsheet").hidden) renderDon();
+}
+const todayKey=()=>{const d=new Date();return `w:${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;};
+const watchedToday=()=>todayKey() in myPts.credited;
+let advTimer=0;
+function openAd(){
+  if(watchedToday()||!uid||(!demo&&!ptsLoaded)) return;
+  $("adv").hidden=false; $("advclaim").disabled=true; let left=15;
+  $("advbar").style.transition="none"; $("advbar").style.width="0"; void $("advbar").offsetWidth; $("advbar").style.transition="";
+  const step=()=>{ $("advcnt").textContent=left>0?`noch ${left} Sek.`:"Fertig"; $("advbar").style.width=((15-left)/15*100)+"%";
+    if(left<=0){clearInterval(advTimer);$("advclaim").disabled=false;$("advclaim").focus();} left--; };
+  step(); advTimer=setInterval(step,1000); $("advstop").focus();
+}
+function closeAd(){clearInterval(advTimer);$("adv").hidden=true;}
+$("wbtn").onclick=openAd;
+$("advstop").onclick=()=>{closeAd();$("pstatus").textContent="Abgebrochen, keine Punkte.";};
+$("advclaim").onclick=()=>{ if(watchedToday()){closeAd();return;}
+  myPts={...myPts,credited:{...myPts.credited,[todayKey()]:5}}; savePts(); closeAd(); updatePtsChip(); render();
+  $("pstatus").textContent="+5 Punkte gutgeschrieben. Morgen wieder."; toast("+5 Punkte"); };
+function fillPts(){
+  const w=watchedToday(); $("wbtn").disabled=w||!canWrite; $("wbtn").textContent=w?"✓ Heute erledigt":"▶ +5 Punkte";
+  $("pbal").textContent=balance();
+  $("pprem").innerHTML=isPremium()?`<span class="premtag">Premium bis ${esc(fmtDate(myPts.premiumBis))}${myPts.abo?" · "+eur(myPts.abo.preis)+"/Monat":""}</span>`:"";
+  fillPlan();
+  document.querySelectorAll(".offer").forEach(b=>{b.disabled=balance()<Number(b.dataset.cost)||!canWrite;});
+}
+function openPts(msg){ $("toast").hidden=true; fillPts(); $("pstatus").textContent=msg||""; $("pstatus").className="status"; $("psheet").hidden=false; setTimeout(()=>$("pclose").focus(),30); }
+$("pts").onclick=()=>openPts(); $("pclose").onclick=()=>{$("psheet").hidden=true;};
+$("psheet").addEventListener("click",e=>{if(e.target===$("psheet"))$("psheet").hidden=true;});
+$("psheet").querySelector(".offers").addEventListener("click",async e=>{
+  const b=e.target.closest(".offer"); if(!b||b.disabled) return;
+  const cost=Number(b.dataset.cost), days=Number(b.dataset.days);
+  if(balance()<cost){$("pstatus").textContent="Nicht genug Punkte.";return;}
+  const start=Math.max(Date.now(),Number(myPts.premiumBis)||0);
+  myPts={...myPts,spent:(Number(myPts.spent)||0)+cost,premiumBis:start+days*DAY};
+  await savePts(); fillPts(); render(); $("pstatus").textContent=`Premium für ${days} Tage freigeschaltet.`;
+});
+
+/* ================= Strecken-Check ================= */
+let routes=[], activeRoute=0, routeEdit=false, curR=null;
+try{const x=JSON.parse(localStorage.getItem("gc-routes")||"null"); if(x&&Array.isArray(x.r)){routes=x.r.filter(r=>r&&TOWNS[r.a]&&TOWNS[r.b]&&r.a!==r.b).slice(0,3); activeRoute=Math.min(Math.max(0,x.i|0),Math.max(0,routes.length-1));}}catch(e){}
+function saveRoutes(){try{localStorage.setItem("gc-routes",JSON.stringify({r:routes,i:activeRoute}));}catch(e){}}
+const maxRoutes=()=>isPremium()?3:1;
+function curRoute(){
+  const lim=maxRoutes(); const i=Math.min(activeRoute,lim-1); const r=routes[i]; if(!r) return null;
+  const sp=shortest(r.a,r.b); if(!sp) return null;
+  return {a:r.a,b:r.b,path:sp.path,km:sp.km,set:new Set(sp.path)};
+}
+const townOpts=(sel)=>Object.keys(TOWNS).sort((a,b)=>a.localeCompare(b,"de")).map(n=>`<option value="${esc(n)}"${n===sel?" selected":""}>${esc(GEMEINDE[n]?n+" ("+GEMEINDE[n]+")":n)}</option>`).join("");
+function rdot(r){const T=TYPES[r.typ];return `<span class="rdot${T.tri?" tri":""}" style="background:${T.c}" aria-hidden="true">${T.g}</span>`;}
+function renderRoute(all,hs,now){
+  const el=$("route");
+  if(routeEdit||!curR){
+    const r=routeEdit==="new"?null:(routes[activeRoute]||null);
+    el.innerHTML=`<div><div class="rk">Strecken-Check</div><div class="rt">Deine Strecke</div></div>
+      <p class="rintro">Leg deinen Weg fest, z. B. zur Arbeit. Dann siehst du auf einen Blick, ob auf genau dieser Strecke etwas los ist, und wann Wildwechsel-Zeit ist.</p>
+      <div class="rform"><label>Von<select id="r-a">${townOpts(r?r.a:"Tegernau")}</select></label><label>Nach<select id="r-b">${townOpts(r?r.b:"Lörrach")}</select></label></div>
+      <div class="racts"><button class="chipbtn on" id="r-save" type="button">Strecke speichern</button>${curR?`<button class="linkbtn" id="r-cancel" type="button">Abbrechen</button>`:""}</div>
+      <div class="status" id="r-status" aria-live="polite"></div>`;
+    return;
+  }
+  const R=curR, on=all.filter(r=>R.set.has(r.ort));
+  const alarm=on.some(r=>r.typ==="falsch");
+  const stat=alarm?`<span class="rstat alarm">Falschfahrer!</span>`:on.length?`<span class="rstat warn">${on.length} ${on.length===1?"Hinweis":"Hinweise"}</span>`:`<span class="rstat ok">Freie Fahrt</span>`;
+  const via=R.path.slice(1,-1).filter(n=>MAP_LABELS.has(n)); const viaTxt=via.length?`über ${via.slice(0,3).join(", ")}`:"direkt";
+  const rows=on.slice(0,4).map(r=>`<button class="rrow" type="button" data-rid="${esc(r.id)}">${rdot(r)}<span>${esc(lbl(r))} · ${esc(r.ort)}${r.strasse?" · "+esc(r.strasse):""}</span><time>${agoTxt(r.t,now)}</time></button>`).join("");
+  const more=on.length>4?`<button class="linkbtn" data-f-str="1" type="button">Alle ${on.length} anzeigen</button>`:"";
+  const hot=hs.filter(h=>R.set.has(h.ort)&&allowedType(h.typ)).slice(0,2).map(h=>`<b>${esc(artLabel(h.typ,h.art,""))}</b> · ${esc(h.ort)}${h.strasse?" ("+esc(h.strasse)+")":""}`).join(", ");
+  const dusk=duskInfo(now);
+  let duskHtml="";
+  if(dusk){ const wild=reports.filter(r=>now-r.t<HIST&&R.set.has(r.ort)&&(["wild","vieh","wildunfall"].includes(r.art)));
+    const orte=[...new Set(wild.map(r=>r.ort))].slice(0,3);
+    duskHtml=`<div class="dusk"><div><b>${dusk.kind} · erhöhte Wildwechsel-Gefahr</b>${dusk.info}${wild.length?` · auf deiner Strecke ${wild.length}× Tiere gemeldet in 30 Tagen (${esc(orte.join(", "))})`:" · langsam fahren, vor allem im Wald"}</div></div>`; }
+  const tabs=isPremium()&&routes.length>0?`<div class="rtabs">${routes.slice(0,3).map((r,i)=>`<button class="rtab" type="button" data-rtab="${i}" aria-pressed="${i===activeRoute}">${esc(r.a)} → ${esc(r.b)}</button>`).join("")}${routes.length<3?`<button class="rtab" type="button" data-rnew="1">+ Strecke</button>`:""}</div>`:"";
+  el.innerHTML=`<div class="rh"><div style="min-width:0"><div class="rk">Strecken-Check</div><div class="rt">${esc(R.a)} → ${esc(R.b)}</div><div class="rv">${viaTxt} · ca. ${Math.round(R.km*1.25)} km</div></div>${stat}</div>
+    ${tabs}${duskHtml}${rows?`<div class="rrows">${rows}</div>`:""}${more}
+    ${hot?`<div class="rhot">Häufig gemeldet auf der Strecke: ${hot}</div>`:""}
+    <div class="racts"><button class="linkbtn" id="r-edit" type="button">Strecke ändern</button>${!isPremium()?`<button class="linkbtn" data-act="prem" data-id="" type="button">Mehr Strecken mit Premium</button>`:""}</div>`;
+}
+$("route").addEventListener("click",e=>{
+  const t=e.target;
+  if(t.closest("#r-save")){ const a=$("r-a").value,b=$("r-b").value;
+    if(a===b){$("r-status").textContent="Start und Ziel müssen verschieden sein.";$("r-status").className="status err";return;}
+    if(!shortest(a,b)){$("r-status").textContent="Für diese Orte kenne ich noch keine Verbindung.";$("r-status").className="status err";return;}
+    const entry={a,b};
+    if(routeEdit==="new"&&routes.length<maxRoutes()){routes.push(entry);activeRoute=routes.length-1;} else {routes[activeRoute]=entry;}
+    routeEdit=false; saveRoutes(); filterKey="alle"; render(); toast("Strecke gespeichert."); return; }
+  if(t.closest("#r-cancel")){routeEdit=false;render();return;}
+  if(t.closest("#r-edit")){routeEdit=true;render();return;}
+  const tab=t.closest("[data-rtab]"); if(tab){activeRoute=Number(tab.dataset.rtab);saveRoutes();render();return;}
+  if(t.closest("[data-rnew]")){routeEdit="new";render();return;}
+  if(t.closest("[data-f-str]")){filterKey="str";render();$("list").scrollIntoView({behavior:"smooth",block:"start"});return;}
+  if(t.closest("[data-act=prem]")){openPts();return;}
+  const row=t.closest("[data-rid]"); if(row){focusReport(row.dataset.rid);}
+});
+
+/* ================= Premium-Abo ================= */
+const PRICE_MIN=4.99, PRICE_MAX=19.99;
+let priceSel=4.99, priceCustom=12.99, priceMode="4.99";
+const eur=v=>v.toFixed(2).replace(".",",")+" €";
+function curPrice(){return priceMode==="custom"?priceCustom:Number(priceMode);}
+function fillPlan(){
+  const p=curPrice();
+  $("pr-val").textContent=eur(p);
+  document.querySelectorAll("#tiers .tier").forEach(b=>b.setAttribute("aria-checked",String(b.dataset.p===priceMode)));
+  $("pr-custom").hidden=priceMode!=="custom"; $("pr-out").textContent=eur(priceCustom);
+  $("pr-minus").disabled=priceCustom<=PRICE_MIN+0.001; $("pr-plus").disabled=priceCustom>=PRICE_MAX-0.001;
+  const extra=Math.max(0,p-PRICE_MIN);
+  $("pr-impact").innerHTML=extra>0
+    ?`<b>Danke für deine Unterstützung!</b> Du hilfst dem Projekt und damit auch krebskranken Kindern und der Krebsforschung in der Region.`
+    :`Mit 4,99 € deckst du die Kosten der App. 50 % des Gewinns gehen an krebskranke Kinder und Krebsforschung in der Region.`;
+  const ab=myPts.abo; const active=isPremium()&&ab&&ab.preis;
+  $("pr-buy").textContent=active?`Auf ${eur(p)} im Monat umstellen`:`Premium für ${eur(p)} im Monat holen`;
+  $("pr-buy").disabled=!canWrite||(active&&Math.abs(ab.preis-p)<0.001);
+}
+$("tiers").addEventListener("click",e=>{const b=e.target.closest(".tier");if(!b)return;priceMode=b.dataset.p;fillPlan();});
+$("tiers").addEventListener("keydown",e=>{ if(!["ArrowLeft","ArrowRight"].includes(e.key)) return; const bs=[...document.querySelectorAll("#tiers .tier")];
+  const i=bs.findIndex(b=>b.dataset.p===priceMode); const n=bs[(i+(e.key==="ArrowRight"?1:bs.length-1))%bs.length]; priceMode=n.dataset.p; fillPlan(); n.focus(); e.preventDefault(); });
+$("pr-minus").onclick=()=>{priceCustom=Math.max(PRICE_MIN,Math.round((priceCustom-1)*100)/100);fillPlan();};
+$("pr-plus").onclick=()=>{priceCustom=Math.min(PRICE_MAX,Math.round((priceCustom+1)*100)/100);fillPlan();};
+$("pr-buy").onclick=async()=>{
+  const p=curPrice(); if(p<PRICE_MIN-0.001){return;}
+  const start=Math.max(Date.now(),Number(myPts.premiumBis)||0);
+  const was=isPremium()&&myPts.abo;
+  myPts={...myPts,abo:{preis:Math.round(p*100)/100,t:Date.now()},premiumBis:was?Number(myPts.premiumBis):start+30*DAY};
+  await savePts(); fillPts(); render();
+  $("pstatus").className="status"; $("pstatus").textContent=was?`Umgestellt auf ${eur(p)} im Monat. Danke!`:`Premium aktiv (Test, 30 Tage) für ${eur(p)} im Monat. Danke!`;
+  toast("Premium aktiv");
+};
+
+/* ================= Spenden-Voting ================= */
+let userCap=null, isOwnerView=false, ziele=[], dvotes=new Map(), myDvote=null;
+let localZiele=[], localVotes=new Map();
+function roundInfo(d=new Date()){ const q=Math.floor(d.getMonth()/3)+1; const end=new Date(d.getFullYear(),q*3,0);
+  return {id:`${d.getFullYear()}-Q${q}`,label:`Runde Q${q} ${d.getFullYear()}`,end:end.toLocaleDateString("de-DE",{day:"numeric",month:"long"})}; }
+function cleanZiel(id,x){ if(!x||typeof x.name!=="string"||x.runde!==roundInfo().id) return null;
+  return {id,name:maskBad(clip(x.name,70)),grund:maskBad(clip(x.grund,140)),by:typeof x.by==="string"?x.by:"",t:Number(x.t)||0}; }
+function renderDon(){
+  const R=roundInfo(); $("dround").textContent=`${R.label} · Abstimmung bis ${R.end}`;
+  const list=demo?localZiele:ziele; const votes=demo?localVotes:dvotes;
+  const count=new Map(); for(const z of votes.values()) count.set(z,(count.get(z)||0)+1);
+  const total=[...count.values()].reduce((a,b)=>a+b,0);
+  const prem=isPremium();
+  const sorted=[...list].sort((a,b)=>(count.get(b.id)||0)-(count.get(a.id)||0)||a.t-b.t);
+  $("dlist").innerHTML=sorted.length?sorted.map(z=>{const n=count.get(z.id)||0, pc=total?Math.round(n/total*100):0, mine=myDvote===z.id;
+    return `<div class="dz${mine?" mine":""}"><div class="top"><span class="nm">${esc(z.name)}</span><span class="pc">${n} ${n===1?"Stimme":"Stimmen"} · ${pc} %</span></div>
+      ${z.grund?`<div class="gr">${esc(z.grund)}</div>`:""}<div class="vbar"><i style="width:${pc}%"></i></div>
+      <div class="acts"><button class="chipbtn${mine?" on":""}" type="button" data-dv="${esc(z.id)}" ${prem&&canWrite?"":"disabled"} aria-pressed="${mine}">${mine?"✓ Deine Stimme":"Stimme geben"}</button>
+      ${(isOwnerView||z.by===uid)?`<button class="chipbtn" type="button" data-drm="${esc(z.id)}">Entfernen</button>`:""}</div></div>`;}).join("")
+    :`<div class="empty"><p>Noch keine Vorschläge in dieser Runde. ${prem?"Reich unten den ersten ein.":"Premium-Mitglieder können Ziele vorschlagen."}</p></div>`;
+  const already=list.some(z=>z.by===uid);
+  $("dform").hidden=!prem; $("d-add").disabled=already||!canWrite; $("d-add").textContent=already?"Du hast diese Runde schon vorgeschlagen":"Vorschlag einreichen";
+  if(!prem) $("dstatus").textContent="Abstimmen und Vorschlagen ist ein Premium-Vorteil. Premium gibt es auch über Punkte.";
+}
+function openDon(){ $("msheet").hidden=true; $("toast").hidden=true; $("dstatus").textContent=""; renderDon(); $("dsheet").hidden=false; setTimeout(()=>$("dclose").focus(),30); }
+$("don").onclick=openDon; $("dclose").onclick=()=>{$("dsheet").hidden=true;};
+$("dsheet").addEventListener("click",async e=>{
+  if(e.target===$("dsheet")){$("dsheet").hidden=true;return;}
+  const v=e.target.closest("[data-dv]"), rm=e.target.closest("[data-drm]");
+  if(v&&!v.disabled){ const zid=v.dataset.dv; const next=myDvote===zid?null:zid; myDvote=next;
+    if(demo){ if(next) localVotes.set(uid,next); else localVotes.delete(uid); renderDon(); return; }
+    renderDon();
+    try{ if(next) await db.doc("spendenvotes/"+uid).set({ziel:next,runde:roundInfo().id,t:Date.now()}); else await db.doc("spendenvotes/"+uid).delete(); }
+    catch(err){ $("dstatus").textContent="Stimme konnte nicht gespeichert werden."; } }
+  if(rm){ const zid=rm.dataset.drm;
+    if(demo){ localZiele=localZiele.filter(z=>z.id!==zid); renderDon(); return; }
+    try{ await db.doc("spendenziele/"+zid).delete(); }catch(err){ $("dstatus").textContent="Entfernen fehlgeschlagen."; } }
+});
+$("d-add").onclick=async()=>{
+  const name=clip($("d-name").value,70), grund=clip($("d-grund").value,140);
+  if(name.length<3){$("dstatus").textContent="Bitte den Namen der Organisation angeben.";return;}
+  if(hasBad(name)||hasBad(grund)){$("dstatus").textContent="Bitte ohne Schimpfwörter.";return;}
+  const doc={name,grund,by:uid,t:Date.now(),runde:roundInfo().id};
+  $("d-add").disabled=true;
+  try{ if(demo){ localZiele.push({id:"z"+doc.t,...doc}); } else { await db.collection("spendenziele").add(doc); }
+    $("d-name").value=""; $("d-grund").value=""; $("dstatus").textContent="Danke! Dein Vorschlag steht zur Abstimmung."; renderDon(); }
+  catch(err){ $("dstatus").textContent="Vorschlag konnte nicht gespeichert werden."; $("d-add").disabled=false; }
+};
+function subscribeDonations(){
+  const R=roundInfo().id;
+  db.collection("spendenziele").where("runde","==",R).onSnapshot(snap=>{ ziele=snap.docs.map(d=>cleanZiel(d.id,d.data())).filter(Boolean); if(!$("dsheet").hidden) renderDon(); },()=>{});
+  db.collection("spendenvotes").where("runde","==",R).onSnapshot(snap=>{ const m=new Map();
+    for(const d of snap.docs){const x=d.data()||{}; if(typeof x.ziel==="string") m.set(d.id,x.ziel);}
+    dvotes=m; myDvote=m.get(uid)||null; if(!$("dsheet").hidden) renderDon(); },()=>{});
+}
+
+/* ================= Fahrermodus ================= */
+/* 3D-Ansicht wie ein Navi: Karte liegt geneigt, Fahrtrichtung zeigt nach oben.
+   Warnt nur vor Gefahren, Stau, Unfällen und Falschfahrern – keine Blitzer (§ 23 Abs. 1c StVO). */
+const DRIVE_TYPES=new Set(["falsch","stau","unfall","gefahr"]);
+const SC=3.2, D2R=Math.PI/180, TILT_FIX=2;
+const inKreis=(la,lo)=>la>47.52&&la<47.90&&lo>7.50&&lo<8.05;
+let voiceOn=true, announced=new Set(), wakeLock=null;
+let dSrc="wait", dWatch=null, dDemoTimer=0, dRaf=0, dLastT=0, dLastUi=0, demoForced=false;
+let dCur=null, dTgt=null, dHd=0, dTgtHd=0, dHdKnown=false, dSpeed=null, dLastFix=null, dFixInKreis=false;
+let dHz=[], demoPath=null, demoDist=0, dBuilt=false, dRouteKey="";
+const dBills=new Map();
+function brg(la1,lo1,la2,lo2){const y=Math.sin((lo2-lo1)*D2R)*Math.cos(la2*D2R),x=Math.cos(la1*D2R)*Math.sin(la2*D2R)-Math.sin(la1*D2R)*Math.cos(la2*D2R)*Math.cos((lo2-lo1)*D2R);return (Math.atan2(y,x)/D2R+360)%360;}
+const angDiff=(a,b)=>Math.abs(((a-b+540)%360)-180);
+const distTxt=m=>m<1000?`${Math.max(50,Math.round(m/50)*50)} m`:`${(m/1000).toFixed(1).replace(".",",")} km`;
+const distSay=m=>m<1000?`${Math.max(50,Math.round(m/50)*50)} Metern`:`${(m/1000).toFixed(1).replace(".",",")} Kilometern`;
+function sayText(r){return `${r.typ==="falsch"?"Achtung, Achtung! ":"Achtung, "}${lbl(r)}${r.strasse?" auf der "+r.strasse.replace(/^([AB])(\d)/,"$1 $2"):""} bei ${r.ort}${r.richtung?", Richtung "+r.richtung:""}.`;}
+function speak(t){try{if(!("speechSynthesis" in window))return;const u=new SpeechSynthesisUtterance(t);u.lang="de-DE";u.rate=1;window.speechSynthesis.speak(u);}catch(e){}}
+
+function dBuildBase(){
+  if(dBuilt) return; dBuilt=true;
+  const P=a=>a.map(p=>proj(...pt(p)).map(n=>n.toFixed(1)).join(",")).join(" ");
+  let s=`<rect x="-400" y="-400" width="1800" height="1800" fill="url(#dgrid)"/>`
+    +`<polyline points="${P(RHEIN)}" fill="none" stroke="#1f3b57" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>`;
+  for(const [a,b] of EDGES_EXTRA) s+=`<polyline points="${P([a,b])}" fill="none" stroke="#323943" stroke-width="2.8" stroke-linecap="round"/>`;
+  for(const r of ROADS) s+=`<polyline points="${P(r.p)}" fill="none" stroke="#1d2229" stroke-width="${r.a?7:6}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  for(const r of ROADS) s+=`<polyline points="${P(r.p)}" fill="none" stroke="${r.a?"#4f5b6b":"#465060"}" stroke-width="${r.a?5:4.2}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  for(const r of ROADS) if(r.a) s+=`<polyline points="${P(r.p)}" fill="none" stroke="#1d2229" stroke-width=".6" stroke-dasharray="3 3"/>`;
+  s+=`<g id="droute"></g>`;
+  for(const [la,lo] of Object.values(TOWNS)){const [x,y]=proj(la,lo); s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.4" fill="#8f959e" opacity=".55"/>`;}
+  $("dworld").innerHTML=s;
+  for(const [n,[la,lo]] of Object.entries(TOWNS)){
+    const g=document.createElementNS("http://www.w3.org/2000/svg","g");
+    const big=BIG.has(n);
+    g.innerHTML=`<text y="-12" text-anchor="middle" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="${big?700:600}" font-size="${big?30:24}" fill="#c9cdd3" stroke="#07090c" stroke-width="6" paint-order="stroke" letter-spacing="1">${esc(n.toUpperCase())}</text>`;
+    $("dbill").appendChild(g); dBills.set("t:"+n,{g,la,lo,town:true});
+  }
+}
+function dSetRoute(){
+  const path=dSrc==="demo"&&demoPath?demoPath.names:(curR?curR.path:null);
+  const key=path?path.join("|"):"";
+  if(key===dRouteKey) return; dRouteKey=key;
+  const el=$("droute"); if(!el) return;
+  if(!path||path.length<2){el.innerHTML="";return;}
+  const pts=path.map(n=>proj(...TOWNS[n]).map(v=>v.toFixed(1)).join(",")).join(" ");
+  el.innerHTML=`<polyline points="${pts}" fill="none" stroke="#f2b705" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" opacity=".16"/>`
+    +`<polyline points="${pts}" fill="none" stroke="#f2b705" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>`;
+}
+function hzPos(r){
+  if(r.lat!=null&&r.lon!=null) return [r.lat,r.lon];
+  const h=hash(r.id), [la,lo]=TOWNS[r.ort];
+  return [la+(((h&15)-8)*0.00025),lo+((((h>>4)&15)-8)*0.00035)];
+}
+function demoHazards(now){
+  return [
+    {id:"demo-wild",typ:"gefahr",art:"wild",detail:null,ort:"Wieslet",strasse:null,richtung:null,t:now-6*MIN,demo:true,lat:47.6985,lon:7.7712},
+    {id:"demo-bau",typ:"gefahr",art:"baustelle",detail:null,ort:"Maulburg",strasse:"B317",richtung:null,t:now-50*MIN,demo:true,lat:47.6455,lon:7.7790}
+  ];
+}
+function dHazards(now){
+  const real=dHz.filter(r=>active(r,now));
+  return real.length||dSrc!=="demo"?real:demoHazards(now);
+}
+function renderDrive(list,now){
+  dHz=reports.filter(r=>active(r,now)&&DRIVE_TYPES.has(r.typ)&&TOWNS[r.ort]);
+  $("d-route").textContent=dSrc==="demo"&&demoPath?`${demoPath.names[0]} → ${demoPath.names[demoPath.names.length-1]}`:curR?`${curR.a} → ${curR.b}`:"Ganzer Landkreis";
+  dSyncHzBills(now);
+}
+function dSyncHzBills(now){
+  const list=dHazards(now||Date.now()), want=new Set(list.map(r=>"h:"+r.id));
+  for(const [k,b] of dBills) if(k.startsWith("h:")&&!want.has(k)){b.g.remove();dBills.delete(k);}
+  for(const r of list){
+    const k="h:"+r.id; if(dBills.has(k)) continue;
+    const T=TYPES[r.typ], col=getComputedStyle(document.documentElement).getPropertyValue(T.c.slice(4,-1)).trim()||"#f2b705";
+    const head=T.tri?`<polygon points="0,-132 34,-72 -34,-72" style="fill:${col}" stroke="#07090c" stroke-width="4" stroke-linejoin="round"/><text y="-80" text-anchor="middle" font-family="Barlow Condensed,sans-serif" font-weight="700" font-size="30" fill="#111">${T.g}</text>`
+      :`<circle cy="-100" r="30" style="fill:${col}" stroke="#07090c" stroke-width="4"/><text y="-89" text-anchor="middle" font-family="Barlow Condensed,sans-serif" font-weight="700" font-size="30" fill="#111">${T.g}</text>`;
+    const g=document.createElementNS("http://www.w3.org/2000/svg","g");
+    g.innerHTML=`<ellipse rx="18" ry="9" style="fill:${col}" opacity=".35"/><line x1="0" y1="0" x2="0" y2="-70" style="stroke:${col}" stroke-width="4"/>${head}`;
+    const [la,lo]=hzPos(r); $("dbill").appendChild(g); dBills.set(k,{g,la,lo});
+  }
+}
+function dDraw(){
+  if(!dCur) return;
+  const [ux,uy]=proj(dCur.lat,dCur.lon);
+  $("dworld").setAttribute("transform",`rotate(${(-dHd).toFixed(2)}) scale(${SC}) translate(${(-ux).toFixed(2)} ${(-uy).toFixed(2)})`);
+  const c=Math.cos(dHd*D2R), s=Math.sin(dHd*D2R);
+  for(const b of dBills.values()){
+    const [wx,wy]=proj(b.la,b.lo), dx=(wx-ux)*SC, dy=(wy-uy)*SC;
+    const lx=dx*c+dy*s, ly=-dx*s+dy*c;
+    const vis=ly>-680&&ly<(b.town?-50:260)&&Math.abs(lx)<640&&!(b.town&&Math.hypot(lx,ly)<40);
+    if(!vis){ if(b.on!==false){b.g.setAttribute("display","none");b.on=false;} continue; }
+    if(b.on!==true){b.g.removeAttribute("display");b.on=true;}
+    b.g.setAttribute("transform",`translate(${lx.toFixed(1)} ${ly.toFixed(1)}) scale(1 ${TILT_FIX})`);
+  }
+}
+function dUi(){
+  const d=new Date(); $("d-clock").textContent=String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+  $("d-speed").textContent=dSpeed==null?"–":String(Math.max(0,Math.round(dSpeed)));
+  const src=$("d-src"); src.textContent=dSrc==="gps"?"GPS":dSrc==="demo"?"Demo":"Suche GPS …"; src.className="dsrc"+(dSrc==="gps"?" gps":"");
+  $("d-demo").setAttribute("aria-pressed",String(dSrc==="demo")); $("d-demo").textContent=dSrc==="demo"?"Demo läuft":"Demo-Fahrt";
+  if(!dCur) return;
+  const now=Date.now();
+  const ahead=dHazards(now).map(r=>{const [la,lo]=hzPos(r); const m=metersBetween(dCur.lat,dCur.lon,la,lo);
+      const diff=angDiff(brg(dCur.lat,dCur.lon,la,lo),dHd); return {r,m,vorn:m<250||(m<8000&&(!dHdKnown||diff<55))};})
+    .filter(x=>x.vorn).sort((a,b)=>(b.r.typ==="falsch"&&b.m<3000)-(a.r.typ==="falsch"&&a.m<3000)||a.m-b.m);
+  const box=$("d-next");
+  if(!ahead.length){
+    box.className="dnext calm";
+    box.innerHTML=`<div class="ico">✓</div><div><div class="what">Freie Fahrt</div><div class="where">${dSrc==="wait"?"Warte auf deinen Standort …":"Keine Gefahren vor dir gemeldet"}</div></div>`;
+    $("d-more").textContent=""; return;
+  }
+  const {r,m}=ahead[0], T=TYPES[r.typ];
+  box.className="dnext"+(r.typ==="falsch"||m<500?" alarm":"");
+  box.innerHTML=`${badge(T,r)}<div style="min-width:0"><div class="dist"${r.typ==="falsch"?' style="color:var(--t-falsch)"':""}>${distTxt(m)}</div><div class="what">${esc(lbl(r))}</div>
+    <div class="where">${esc([r.strasse,r.ort].filter(Boolean).join(" · "))}${r.richtung?" → "+esc(r.richtung):""} · ${r.demo?"Beispiel":agoTxt(r.t,now)}</div></div>`;
+  $("d-more").textContent=ahead.length>1?`Danach: ${ahead.slice(1,3).map(x=>`${lbl(x.r)} in ${distTxt(x.m)}`).join(", ")}`:"";
+  for(const x of ahead) if(x.m<2000&&!announced.has(x.r.id)){ announced.add(x.r.id); if(voiceOn) speak(`${sayText(x.r)} In ${distSay(x.m)}.`); break; }
+}
+function dFrame(t){
+  dRaf=requestAnimationFrame(dFrame);
+  const dt=Math.min(.1,Math.max(0,(t-(dLastT||t))/1000)); dLastT=t;
+  if(dSrc==="demo") demoStep(dt);
+  if(dTgt){
+    if(!dCur) dCur={...dTgt};
+    const k=dSrc==="demo"?1:1-Math.pow(.05,dt);
+    dCur.lat+=(dTgt.lat-dCur.lat)*k; dCur.lon+=(dTgt.lon-dCur.lon)*k;
+    const dh=((dTgtHd-dHd+540)%360)-180; dHd=(dHd+dh*(1-Math.pow(.08,dt))+360)%360;
+  }
+  dDraw();
+  if(t-dLastUi>400){dLastUi=t; dUi();}
+}
+/* ---- Demo-Fahrt ---- */
+function demoBuild(){
+  const names=curR?curR.path:((shortest("Tegernau","Lörrach")||{path:["Schopfheim","Maulburg","Steinen","Lörrach"]}).path);
+  const pts=names.map(n=>TOWNS[n]); const cum=[0];
+  for(let i=1;i<pts.length;i++) cum.push(cum[i-1]+metersBetween(pts[i-1][0],pts[i-1][1],pts[i][0],pts[i][1]));
+  return {names,pts,cum,len:cum[cum.length-1]};
+}
+function demoAt(d){
+  const P=demoPath; d=Math.max(0,Math.min(P.len,d));
+  let i=1; while(i<P.cum.length-1&&P.cum[i]<d) i++;
+  const f=(d-P.cum[i-1])/((P.cum[i]-P.cum[i-1])||1), a=P.pts[i-1], b=P.pts[i];
+  return {lat:a[0]+(b[0]-a[0])*f, lon:a[1]+(b[1]-a[1])*f};
+}
+function demoStep(dt){
+  if(!demoPath||demoPath.len<50) return;
+  demoDist+=dt*95; // 5-fach beschleunigt
+  if(demoDist>=demoPath.len){demoDist=0; announced=new Set();}
+  const p=demoAt(demoDist), q=demoAt(demoDist+300);
+  dTgt=p; if(metersBetween(p.lat,p.lon,q.lat,q.lon)>5){dTgtHd=brg(p.lat,p.lon,q.lat,q.lon); dHdKnown=true;}
+  dSpeed=64+Math.sin(performance.now()/2600)*4;
+}
+function startDemo(msg){
+  clearTimeout(dDemoTimer);
+  if(dSrc==="demo") return;
+  demoPath=demoBuild(); demoDist=0; announced=new Set();
+  dSrc="demo"; const p=demoAt(0); dCur={...p}; dTgt=p;
+  const q=demoAt(300); dHd=dTgtHd=brg(p.lat,p.lon,q.lat,q.lon); dHdKnown=true;
+  dSetRoute(); renderDrive(null,Date.now()); if(msg) toast(msg); dUi();
+}
+function useGps(){
+  if(!dLastFix||!dFixInKreis) return false;
+  dSrc="gps"; dSpeed=dLastFix.speed; dTgt={lat:dLastFix.lat,lon:dLastFix.lon}; dCur={...dTgt};
+  dRouteKey="x"; dSetRoute(); announced=new Set(); renderDrive(null,Date.now()); dUi(); return true;
+}
+/* ---- GPS ---- */
+function onFix(p){
+  const c=p.coords, now=p.timestamp||Date.now();
+  const fix={lat:c.latitude,lon:c.longitude,t:now,speed:null};
+  if(dLastFix){
+    const m=metersBetween(dLastFix.lat,dLastFix.lon,fix.lat,fix.lon), s=(now-dLastFix.t)/1000;
+    fix.speed=c.speed!=null&&c.speed>=0?c.speed*3.6:(s>=1&&m/s*3.6<250?m/s*3.6:dSpeed);
+    if(c.heading!=null&&!isNaN(c.heading)&&(c.speed||0)>1.5){dTgtHd=c.heading;dHdKnown=true;}
+    else if(m>12){dTgtHd=brg(dLastFix.lat,dLastFix.lon,fix.lat,fix.lon);dHdKnown=true;}
+  } else fix.speed=c.speed!=null&&c.speed>=0?c.speed*3.6:null;
+  if(fix.speed!=null&&fix.speed<3) fix.speed=0;
+  dLastFix=fix; dFixInKreis=inKreis(fix.lat,fix.lon);
+  if(demoForced) return;
+  if(dFixInKreis){ clearTimeout(dDemoTimer); if(dSrc!=="gps") useGps(); else {dTgt={lat:fix.lat,lon:fix.lon}; dSpeed=fix.speed;} }
+  else if(dSrc!=="demo") startDemo("Du bist gerade außerhalb des Landkreises – die Demo-Fahrt zeigt, wie es aussieht.");
+}
+function onFixErr(){ if(dSrc!=="gps"&&dSrc!=="demo") startDemo("Standort nicht verfügbar – die Demo-Fahrt zeigt, wie es aussieht."); }
+
+async function enterDrive(){
+  $("msheet").hidden=true; $("drive").hidden=false;
+  dBuildBase(); announced=new Set(); demoForced=false; dSrc="wait"; dLastFix=null; dFixInKreis=false; dHdKnown=false; dSpeed=null;
+  const start=curR?TOWNS[curR.path[0]]:TOWNS["Lörrach"]; dCur={lat:start[0],lon:start[1]}; dTgt={...dCur}; dHd=dTgtHd=0;
+  dRouteKey="x"; dSetRoute(); render();
+  voiceOn=true; $("d-voice").setAttribute("aria-pressed","true"); $("d-voice").textContent="🔊 Ansage an";
+  speak("Fahrermodus an.");
+  if(navigator.geolocation){
+    try{ dWatch=navigator.geolocation.watchPosition(onFix,onFixErr,{enableHighAccuracy:true,maximumAge:1000,timeout:15000}); }catch(e){ onFixErr(); }
+    dDemoTimer=setTimeout(()=>{ if(dSrc==="wait") startDemo("Noch kein GPS-Signal – die Demo-Fahrt zeigt, wie es aussieht."); },7000);
+  } else startDemo("Dein Browser gibt keinen Standort her – die Demo-Fahrt zeigt, wie es aussieht.");
+  dLastT=0; cancelAnimationFrame(dRaf); dRaf=requestAnimationFrame(dFrame);
+  try{ if(navigator.wakeLock){ wakeLock=await navigator.wakeLock.request("screen"); wakeLock.addEventListener("release",()=>{wakeLock=null;}); } }catch(e){ wakeLock=null; }
+  $("d-exit").focus();
+}
+function exitDrive(){
+  $("drive").hidden=true;
+  cancelAnimationFrame(dRaf); dRaf=0; clearTimeout(dDemoTimer);
+  if(dWatch!=null){ try{navigator.geolocation.clearWatch(dWatch);}catch(e){} dWatch=null; }
+  dSrc="wait"; try{window.speechSynthesis&&window.speechSynthesis.cancel();}catch(e){}
+  try{wakeLock&&wakeLock.release();}catch(e){} wakeLock=null;
+}
+$("m-fahr").onclick=enterDrive; $("mi-fahr").onclick=enterDrive; $("d-exit").onclick=exitDrive;
+$("d-voice").onclick=()=>{
+  voiceOn=!voiceOn; $("d-voice").setAttribute("aria-pressed",String(voiceOn)); $("d-voice").textContent=voiceOn?"🔊 Ansage an":"🔈 Ansage aus";
+  if(voiceOn){ announced=new Set(); speak("Ansagen sind an."); } else { try{window.speechSynthesis.cancel();}catch(e){} }
+};
+$("d-demo").onclick=()=>{
+  if(dSrc==="demo"){ demoForced=false; if(!useGps()) toast(dLastFix?"Du bist nicht im Landkreis – die Demo läuft weiter.":"Noch kein GPS-Signal – die Demo läuft weiter."); }
+  else { demoForced=true; startDemo(); }
+};
+document.addEventListener("visibilitychange",async()=>{ if(!$("drive").hidden&&document.visibilityState==="visible"&&!wakeLock){ try{wakeLock=await navigator.wakeLock.request("screen");}catch(e){} } });
+
+$("more").onclick=()=>{$("toast").hidden=true;$("msheet").hidden=false;setTimeout(()=>$("mclose").focus(),30);};
+$("mclose").onclick=()=>{$("msheet").hidden=true;};
+$("msheet").addEventListener("click",e=>{if(e.target===$("msheet"))$("msheet").hidden=true;});
+$("mi-pts").onclick=()=>{$("msheet").hidden=true;openPts();};
+
+/* ================= Testversion & Feedback ================= */
+const FEEDBACK_NR="491783053639";
+function seedGuest(){
+  const now=Date.now();
+  const raw=[
+    ["g1",{typ:"gefahr",art:"wild",detail:"Rehe",ort:"Wieslet",strasse:"",richtung:"Tegernau",kurz:"Zwei Rehe am Waldrand",t:now-12*MIN}],
+    ["g2",{typ:"stau",art:"zoll",ort:"Weil am Rhein",strasse:"A5",richtung:"Basel",kurz:"",t:now-20*MIN}],
+    ["g3",{typ:"blitzer",art:"",ort:"Steinen",strasse:"B317",richtung:"Schopfheim",kurz:"Am Ortsausgang",t:now-35*MIN}],
+    ["g4",{typ:"blitzer",art:"fest",ort:"Lörrach",strasse:"",richtung:"",kurz:"Ampelblitzer",t:now-5*DAY}],
+    ["g5",{typ:"gefahr",art:"baustelle",ort:"Maulburg",strasse:"B317",richtung:"",kurz:"Eine Spur gesperrt",t:now-3*60*MIN}],
+    ["g6",{typ:"gefahr",art:"glaette",ort:"Todtnau",strasse:"",richtung:"Feldberg",kurz:"",t:now-60*MIN}]
+  ];
+  reports=raw.map(([id,d])=>clean(id,{...d,by:"beispiel"})).filter(Boolean);
+}
+let fbStars=0; const fbAns={};
+function fbText(){
+  const st=fbStars?"★".repeat(fbStars)+"☆".repeat(5-fbStars)+` (${fbStars}/5)`:"keine Angabe";
+  const l=["Feedback zur Testversion „Gefahren & Co“",`Gesamt: ${st}`];
+  const gut=$("f-gut").value.trim(), sch=$("f-schlecht").value.trim();
+  if(gut) l.push("","Gefällt mir: "+gut);
+  if(sch) l.push("","Fehlt / nervt: "+sch);
+  if(fbAns.nutzen) l.push("","Würde ich nutzen: "+fbAns.nutzen);
+  if(fbAns.premium) l.push("Premium 4,99 €: "+fbAns.premium);
+  return l.join("\n");
+}
+function fbUpdate(){
+  $("f-send").href="https://wa.me/"+FEEDBACK_NR+"?text="+encodeURIComponent(fbText());
+  document.querySelectorAll("#f-stars button").forEach(b=>{const n=+b.dataset.s;b.setAttribute("aria-checked",String(n===fbStars));b.classList.toggle("lit",n<=fbStars);});
+  document.querySelectorAll("[data-fq]").forEach(g=>g.querySelectorAll("button").forEach(b=>{const on=fbAns[g.dataset.fq]===b.dataset.v;b.classList.toggle("on",on);b.setAttribute("aria-pressed",String(on));}));
+}
+function openFb(){ $("msheet").hidden=true; $("toast").hidden=true; fbUpdate(); $("fsheet").hidden=false; setTimeout(()=>$("fclose").focus(),30); }
+$("gast-fb").onclick=openFb; $("mi-fb").onclick=openFb;
+$("fclose").onclick=()=>{$("fsheet").hidden=true;};
+$("fsheet").addEventListener("click",e=>{if(e.target===$("fsheet"))$("fsheet").hidden=true;});
+$("f-stars").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;fbStars=+b.dataset.s;fbUpdate();});
+document.querySelectorAll("[data-fq]").forEach(g=>g.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const k=g.dataset.fq;fbAns[k]=fbAns[k]===b.dataset.v?undefined:b.dataset.v;fbUpdate();}));
+$("f-gut").addEventListener("input",fbUpdate); $("f-schlecht").addEventListener("input",fbUpdate);
+$("f-send").addEventListener("click",()=>{ setTimeout(()=>toast("Danke! Schick die Nachricht in WhatsApp noch ab."),400); });
+$("f-copy").onclick=async()=>{
+  const t=fbText();
+  try{ await navigator.clipboard.writeText(t); toast("Text kopiert. Du kannst ihn jetzt einfügen."); }
+  catch(e){ const a=document.createElement("textarea"); a.value=t; document.body.appendChild(a); a.select(); let ok=false; try{ok=document.execCommand("copy");}catch(_){} a.remove(); toast(ok?"Text kopiert.":"Kopieren ging nicht. Bitte per WhatsApp senden."); }
+};
+
+/* ================= Start ================= */
+if(REGION==="CH"){ $("geoblock").hidden=false; document.querySelectorAll(".wrap,.bar").forEach(e=>e.setAttribute("aria-hidden","true")); return; }
+if(REGION==="FR") $("geonote").hidden=false;
+render();
+setInterval(render,30000);
+(async()=>{
+  const c=window.claude, use=n=>c&&c.use?c.use(n).catch(()=>null):Promise.resolve(null);
+  const [d,u,s]=await Promise.all([use("db"),use("user"),use("sample")]);
+  db=d; sample=s;
+  try{uid=u?await u.id():null;}catch(e){uid=null;}
+  userCap=u;
+  if(u){try{if(await u.can("data.write")===false)canWrite=false;}catch(e){} try{isOwnerView=!!(await u.isOwner());}catch(e){}}
+  if(!db||!uid||!canWrite){
+    demo=true; canWrite=true; if(!uid) uid="lokal";
+    $("live").classList.remove("on"); $("livetxt").textContent="Testversion";
+    $("gast").hidden=false; if(!reports.length) seedGuest();
+    applyWrite(); render(); return;
+  }
+  applyWrite();
+  db.doc("punkte/"+uid).onSnapshot(d=>{
+    if(d.exists&&!d.metadata.hasPendingWrites){const x=d.data()||{};
+      const ab=x.abo&&typeof x.abo==="object"&&Number(x.abo.preis)>=PRICE_MIN-0.001?{preis:Math.min(PRICE_MAX,Number(x.abo.preis)),t:Number(x.abo.t)||0}:null;
+      myPts={credited:(x.credited&&typeof x.credited==="object")?x.credited:{},spent:Number(x.spent)||0,premiumBis:Number(x.premiumBis)||0,abo:ab};}
+    ptsLoaded=true; updatePtsChip(); render(); scheduleSync();
+  },()=>{ptsLoaded=true;});
+  subscribeDonations();
+  db.doc("data/users/"+uid+"/notizen").get().then(d=>{ if(d.exists){const x=d.data()||{}; if(x.n&&typeof x.n==="object") notes={...x.n}; render();} }).catch(()=>{});
+  db.collection("meldungen").orderBy("t","desc").limit(1000).onSnapshot(snap=>{
+    const now=Date.now(); const list=[]; staleIds=[];
+    for(const x of snap.docs){const r=clean(x.id,x.data()); if(!r) continue; if(now-r.t>HIST&&r.art!=="fest"){staleIds.push(r.id);continue;} list.push(r);}
+    reports=list; $("live").classList.add("on"); $("livetxt").textContent="live"; render(); scheduleSync();
+  },()=>{$("live").classList.remove("on");$("livetxt").textContent="Verbindung getrennt – Seite neu laden";});
+  db.collection("votes").where("u",">",Date.now()-VOTE_KEEP).onSnapshot(snap=>{
+    const m=new Map();
+    for(const x of snap.docs){const d=x.data(); if(d&&d.v&&typeof d.v==="object") m.set(x.id,d.v);}
+    /* eigene, noch nicht bestätigte Stimmen nicht überschreiben */
+    if(m.has(uid)&&!snap.metadata.hasPendingWrites&&!Object.keys(myVotes).length) myVotes=JSON.parse(JSON.stringify(m.get(uid)));
+    m.set(uid,JSON.parse(JSON.stringify(myVotes)));
+    voteDocs=m; render(); scheduleSync();
+  },()=>{});
+})();
+})();
+</script>
+
+
+</body>
+</html>
